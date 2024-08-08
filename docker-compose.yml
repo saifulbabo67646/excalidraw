@@ -5,7 +5,7 @@ services:
     build:
       context: .
       args:
-        - NODE_ENV=development
+        - NODE_ENV=production
     container_name: excalidraw
     ports:
       - "3000:80"
@@ -14,12 +14,34 @@ services:
     healthcheck:
       disable: true
     environment:
-      - NODE_ENV=development
+      - NODE_ENV=production
     volumes:
       - ./:/opt/node_app/app:delegated
       - ./package.json:/opt/node_app/package.json
       - ./yarn.lock:/opt/node_app/yarn.lock
       - notused:/opt/node_app/app/node_modules
+
+  excalidraw-storage-backend:
+    image: ghcr.io/saifulbabo67646/excalidraw-storage-backend:main
+    stdin_open: true
+    # build: 
+    #   context: https://github.com/saifulbabo67646/excalidraw-storage-backend.git#main
+    #   target: production
+    ports:
+      - "8080:8080"
+    environment:
+      STORAGE_URI: redis://:${REDIS_PASSWORD}@redis:6379
+      STORAGE_TTL: 2592000000
+      ENABLE_S3_BACKEND: 'true'
+      EXCALIDRAW_S3_BUCKET_NAME: ${EXCALIDRAW_S3_BUCKET_NAME}
+      EXCALIDRAW_S3_ACCESS_KEY_ID: ${EXCALIDRAW_S3_ACCESS_KEY_ID}
+      EXCALIDRAW_S3_SECRET_ACCESS_KEY: ${EXCALIDRAW_S3_SECRET_ACCESS_KEY}
+    command: npm run start:prod
+
+  excalidraw-room:
+    image: excalidraw/excalidraw-room
+    ports:
+      - "5001:80"
 
 volumes:
   notused:
