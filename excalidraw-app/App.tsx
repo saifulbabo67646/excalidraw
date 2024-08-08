@@ -165,6 +165,8 @@ const COMMENT_ICON_DIMENSION = 32;
 const COMMENT_INPUT_HEIGHT = 50;
 const COMMENT_INPUT_WIDTH = 150;
 
+const VITE_APP_TAIGA_BACKEND_URL = import.meta.env.VITE_APP_TAIGA_BACKEND_URL;
+
 declare global {
   interface BeforeInstallPromptEventChoiceResult {
     outcome: "accepted" | "dismissed";
@@ -409,8 +411,8 @@ const ExcalidrawWrapper = () => {
     const fetchData = async () => {
       const url =
         userType === "user"
-          ? "http://localhost:82/api/users/me"
-          : "http://localhost:82/api/admin/admins/me";
+          ? `${VITE_APP_TAIGA_BACKEND_URL}/users/me`
+          : `${VITE_APP_TAIGA_BACKEND_URL}/admin/admins/me`;
       const response = await fetch(url, {
         headers: {
           Authorization: `Bearer ${token}`,
@@ -423,7 +425,7 @@ const ExcalidrawWrapper = () => {
       // lets fetch comment from the api
       const roomLinkData = getCollaborationLinkData(window.location.href);
       const commentResponse = await fetch(
-        `http://localhost:82/api/rooms/${roomLinkData?.roomId}/comments`,
+        `${VITE_APP_TAIGA_BACKEND_URL}/rooms/${roomLinkData?.roomId}/comments`,
         {
           headers: {
             Authorization: `Bearer ${token}`,
@@ -1047,7 +1049,7 @@ const ExcalidrawWrapper = () => {
     console.log("comment", comment);
     // lets save the comment here
     const roomLinkData = getCollaborationLinkData(window.location.href);
-    const response = await fetch("http://localhost:82/api/comments", {
+    const response = await fetch(`${VITE_APP_TAIGA_BACKEND_URL}/comments`, {
       method: "POST",
       headers: {
         Authorization: `Bearer ${token}`,
@@ -1093,7 +1095,7 @@ const ExcalidrawWrapper = () => {
     console.log("comment", comment);
     // lets save the comment here
     const response = await fetch(
-      `http://localhost:82/api/comments/${comment?.id}`,
+      `${VITE_APP_TAIGA_BACKEND_URL}/comments/${comment?.id}`,
       {
         method: "PUT",
         headers: {
