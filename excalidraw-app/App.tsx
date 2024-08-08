@@ -10,6 +10,7 @@ import {
   THEME,
   TITLE_TIMEOUT,
   VERSION_TIMEOUT,
+  DRAGGING_THRESHOLD,
 } from "../packages/excalidraw/constants";
 import { loadFromBlob } from "../packages/excalidraw/data/blob";
 import type {
@@ -26,6 +27,7 @@ import {
   TTDDialogTrigger,
   StoreAction,
   reconcileElements,
+  Footer,
 } from "../packages/excalidraw";
 import type {
   AppState,
@@ -33,6 +35,8 @@ import type {
   BinaryFiles,
   ExcalidrawInitialDataState,
   UIAppState,
+  Gesture,
+  PointerDownState as ExcalidrawPointerDownState,
 } from "../packages/excalidraw/types";
 import type { ResolvablePromise } from "../packages/excalidraw/utils";
 import {
@@ -43,6 +47,8 @@ import {
   preventUnload,
   resolvablePromise,
   isRunningInIframe,
+  sceneCoordsToViewportCoords,
+  viewportCoordsToSceneCoords,
 } from "../packages/excalidraw/utils";
 import {
   FIREBASE_STORAGE_PREFIXES,
@@ -122,10 +128,42 @@ import { appThemeAtom, useHandleAppTheme } from "./useHandleAppTheme";
 import { getPreferredLanguage } from "./app-language/language-detector";
 import { useAppLangCode } from "./app-language/language-state";
 import { getStorageBackend } from "./data/config";
+import { KEYS } from "../packages/excalidraw/keys";
+import { nanoid } from "nanoid";
+import {
+  distance2d,
+  withBatchedUpdates,
+  withBatchedUpdatesThrottled,
+} from "./utils";
+import CustomFooter from "./components/CustomFooter";
 
 polyfill();
 
 window.EXCALIDRAW_THROTTLE_RENDER = true;
+
+type Comment = {
+  user?: any;
+  x: number;
+  y: number;
+  value: string;
+  id?: string;
+};
+
+type PointerDownState = {
+  x: number;
+  y: number;
+  hitElement: Comment;
+  onMove: any;
+  onUp: any;
+  hitElementOffsets: {
+    x: number;
+    y: number;
+  };
+};
+
+const COMMENT_ICON_DIMENSION = 32;
+const COMMENT_INPUT_HEIGHT = 50;
+const COMMENT_INPUT_WIDTH = 150;
 
 declare global {
   interface BeforeInstallPromptEventChoiceResult {
@@ -319,6 +357,7 @@ const initializeScene = async (opts: {
 };
 
 const ExcalidrawWrapper = () => {
+  const appRef = useRef<any>(null);
   const [errorMessage, setErrorMessage] = useState("");
   const isCollabDisabled = isRunningInIframe();
 
@@ -326,6 +365,21 @@ const ExcalidrawWrapper = () => {
   const { editorTheme } = useHandleAppTheme();
 
   const [langCode, setLangCode] = useAppLangCode();
+
+  const [commentIcons, setCommentIcons] = useState<{
+    [id: string]: {
+      user: any;
+      x: number;
+      y: number;
+      id: string;
+      value: string;
+      replies?: [Comment];
+    };
+  }>({});
+  const [comment, setComment] = useState<Comment | null>(null);
+  const [token, setToken] = useState<string | null>(null);
+  const [userType, setUserType] = useState<string | null>(null);
+  const [user, setUser] = useState<any | null>(null);
 
   // initial state
   // ---------------------------------------------------------------------------
@@ -339,12 +393,78 @@ const ExcalidrawWrapper = () => {
   }
 
   useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const tokenParam = params.get("token");
+    const typeParam = params.get("type");
+    setToken(tokenParam);
+    setUserType(typeParam);
     trackEvent("load", "frame", getFrame());
     // Delayed so that the app has a time to load the latest SW
     setTimeout(() => {
       trackEvent("load", "version", getVersion());
     }, VERSION_TIMEOUT);
   }, []);
+
+  useEffect(() => {
+    const fetchData = async () => {
+      const url =
+        userType === "user"
+          ? "http://localhost:82/api/users/me"
+          : "http://localhost:82/api/admin/admins/me";
+      const response = await fetch(url, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+          Accept: "application/json",
+          "Content-Type": "application/json",
+        },
+      });
+      const json = await response.json();
+      setUser(json.data);
+      // lets fetch comment from the api
+      const roomLinkData = getCollaborationLinkData(window.location.href);
+      const commentResponse = await fetch(
+        `http://localhost:82/api/rooms/${roomLinkData?.roomId}/comments`,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            Accept: "application/json",
+            "Content-Type": "application/json",
+          },
+        },
+      );
+      const commentJson = await commentResponse.json();
+      let tempObj = {};
+      if (commentJson.length > 0) {
+        commentJson.forEach(
+          (element: {
+            comment_id: null;
+            replies: any;
+            id: any;
+            x: number;
+            y: any;
+            value: any;
+          }) => {
+            if (element.comment_id === null) {
+              tempObj = {
+                ...tempObj,
+                [element?.id]: {
+                  x: element?.id ? element?.x - 60 : element.x,
+                  y: Number(element?.y),
+                  id: element?.id,
+                  value: element?.value,
+                  replies: element?.replies,
+                },
+              };
+            }
+          },
+        );
+        setCommentIcons(tempObj);
+      }
+    };
+    if (token) {
+      fetchData();
+    }
+  }, [token, userType]);
 
   const [excalidrawAPI, excalidrawRefCallback] =
     useCallbackRefState<ExcalidrawImperativeAPI>();
@@ -362,6 +482,13 @@ const ExcalidrawWrapper = () => {
     // TODO maybe remove this in several months (shipped: 24-03-11)
     migrationAdapter: LibraryLocalStorageMigrationAdapter,
   });
+
+  useEffect(() => {
+    const username = importUsernameFromLocalStorage();
+    if (username !== user?.name) {
+      collabAPI?.setUsername(user?.name || "");
+    }
+  }, [user?.name]);
 
   useEffect(() => {
     if (!excalidrawAPI || (!isCollabDisabled && !collabAPI)) {
@@ -756,12 +883,398 @@ const ExcalidrawWrapper = () => {
     },
   };
 
+  console.log("commentIcons", commentIcons);
+
+  // comment feature
+  const onPointerDown = (
+    activeTool: AppState["activeTool"],
+    pointerDownState: ExcalidrawPointerDownState,
+  ) => {
+    if (activeTool.type === "custom" && activeTool.customType === "comment") {
+      const { x, y } = pointerDownState.origin;
+      setComment({ x, y, value: "" });
+    }
+  };
+
+  const rerenderCommentIcons = () => {
+    if (!excalidrawAPI) {
+      return false;
+    }
+    const commentIconsElements = appRef.current.querySelectorAll(
+      ".comment-icon",
+    ) as HTMLElement[];
+    commentIconsElements.forEach((ele) => {
+      const id = ele.id;
+      const appstate = excalidrawAPI.getAppState();
+      const { x, y } = sceneCoordsToViewportCoords(
+        { sceneX: commentIcons[id].x, sceneY: commentIcons[id].y },
+        appstate,
+      );
+      ele.style.left = `${
+        x - COMMENT_ICON_DIMENSION / 2 - appstate!.offsetLeft
+      }px`;
+      ele.style.top = `${
+        y - COMMENT_ICON_DIMENSION / 2 - appstate!.offsetTop
+      }px`;
+    });
+  };
+
+  const onPointerMoveFromPointerDownHandler = (
+    pointerDownState: PointerDownState,
+  ) => {
+    return withBatchedUpdatesThrottled((event) => {
+      if (!excalidrawAPI) {
+        return false;
+      }
+      const { x, y } = viewportCoordsToSceneCoords(
+        {
+          clientX: event.clientX - pointerDownState.hitElementOffsets.x,
+          clientY: event.clientY - pointerDownState.hitElementOffsets.y,
+        },
+        excalidrawAPI.getAppState(),
+      );
+      setCommentIcons({
+        ...commentIcons,
+        [pointerDownState.hitElement.id!]: {
+          ...commentIcons[pointerDownState.hitElement.id!],
+          x,
+          y,
+        },
+      });
+    });
+  };
+
+  const onPointerUpFromPointerDownHandler = (
+    pointerDownState: PointerDownState,
+  ) => {
+    return withBatchedUpdates((event) => {
+      window.removeEventListener(EVENT.POINTER_MOVE, pointerDownState.onMove);
+      window.removeEventListener(EVENT.POINTER_UP, pointerDownState.onUp);
+      excalidrawAPI?.setActiveTool({ type: "selection" });
+      const distance = distance2d(
+        pointerDownState.x,
+        pointerDownState.y,
+        event.clientX,
+        event.clientY,
+      );
+      if (distance === 0) {
+        if (!comment) {
+          setComment({
+            x: pointerDownState.hitElement.x + 60,
+            y: pointerDownState.hitElement.y,
+            value: pointerDownState.hitElement.value,
+            id: pointerDownState.hitElement.id,
+          });
+        } else {
+          setComment(null);
+        }
+      }
+    });
+  };
+
+  const renderCommentIcons = () => {
+    return Object.values(commentIcons).map((commentIcon) => {
+      if (!excalidrawAPI) {
+        return false;
+      }
+      const appState = excalidrawAPI.getAppState();
+      const { x, y } = sceneCoordsToViewportCoords(
+        { sceneX: commentIcon.x, sceneY: commentIcon.y },
+        excalidrawAPI.getAppState(),
+      );
+      return (
+        <div
+          id={commentIcon.id}
+          key={commentIcon.id}
+          style={{
+            top: `${y - COMMENT_ICON_DIMENSION / 2 - appState!.offsetTop}px`,
+            left: `${x - COMMENT_ICON_DIMENSION / 2 - appState!.offsetLeft}px`,
+            position: "absolute",
+            zIndex: 2,
+            width: `${COMMENT_ICON_DIMENSION}px`,
+            height: `${COMMENT_ICON_DIMENSION}px`,
+            cursor: "pointer",
+            touchAction: "none",
+          }}
+          className="comment-icon"
+          onPointerDown={(event) => {
+            event.preventDefault();
+            if (comment) {
+              commentIcon.value = comment.value;
+              updateComment();
+            }
+            const pointerDownState: any = {
+              x: event.clientX,
+              y: event.clientY,
+              hitElement: commentIcon,
+              hitElementOffsets: { x: event.clientX - x, y: event.clientY - y },
+            };
+            const onPointerMove =
+              onPointerMoveFromPointerDownHandler(pointerDownState);
+            const onPointerUp =
+              onPointerUpFromPointerDownHandler(pointerDownState);
+            window.addEventListener(EVENT.POINTER_MOVE, onPointerMove);
+            window.addEventListener(EVENT.POINTER_UP, onPointerUp);
+
+            pointerDownState.onMove = onPointerMove;
+            pointerDownState.onUp = onPointerUp;
+
+            excalidrawAPI?.setActiveTool({
+              type: "custom",
+              customType: "comment",
+            });
+          }}
+        >
+          <div className="comment-avatar">
+            <img
+              src="https://cdn.glitch.global/0a9ab45e-b01d-47b8-90dd-db2e125dba4e/doremon.png"
+              alt="doremon"
+            />
+          </div>
+        </div>
+      );
+    });
+  };
+
+  const saveComment = async () => {
+    if (!comment) {
+      return;
+    }
+    if (!comment.id && !comment.value) {
+      setComment(null);
+      return;
+    }
+    console.log("comment", comment);
+    // lets save the comment here
+    const roomLinkData = getCollaborationLinkData(window.location.href);
+    const response = await fetch("http://localhost:82/api/comments", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${token}`,
+        Accept: "application/json",
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        user_id: user?.id,
+        room_id: roomLinkData?.roomId,
+        type: userType,
+        value: comment.value,
+        x: comment.x,
+        y: comment.y,
+        comment_id: comment.id,
+      }),
+    });
+    const saveComment = await response.json();
+    console.log(saveComment);
+    const id = saveComment.id || nanoid();
+    if (!comment.id) {
+      setCommentIcons({
+        ...commentIcons,
+        [id]: {
+          x: saveComment.id ? comment.x - 60 : comment.x,
+          y: comment.y,
+          id,
+          value: comment.value,
+        },
+      });
+    }
+    console.log("show all comment icons", commentIcons);
+    setComment(null);
+  };
+
+  const updateComment = async () => {
+    if (!comment) {
+      return;
+    }
+    if (!comment.id && !comment.value) {
+      setComment(null);
+      return;
+    }
+    console.log("comment", comment);
+    // lets save the comment here
+    const response = await fetch(
+      `http://localhost:82/api/comments/${comment?.id}`,
+      {
+        method: "PUT",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          Accept: "application/json",
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          type: userType,
+          value: comment.value,
+          x: comment.x,
+          y: comment.y,
+        }),
+      },
+    );
+    const saveComment = await response.json();
+    console.log(saveComment);
+    const id = saveComment.id || nanoid();
+    setCommentIcons({
+      ...commentIcons,
+      [id]: {
+        x: saveComment.id ? comment.x - 60 : comment.x,
+        y: comment.y,
+        id,
+        value: comment.value,
+      },
+    });
+    console.log("show all comment icons", commentIcons);
+    setComment(null);
+  };
+
+  const renderComment = () => {
+    if (!comment) {
+      return null;
+    }
+    const appState = excalidrawAPI?.getAppState()!;
+    const { x, y } = sceneCoordsToViewportCoords(
+      { sceneX: comment.x, sceneY: comment.y },
+      appState,
+    );
+    let top = y - COMMENT_ICON_DIMENSION / 2 - appState.offsetTop;
+    let left = x - COMMENT_ICON_DIMENSION / 2 - appState.offsetLeft;
+
+    if (
+      top + COMMENT_INPUT_HEIGHT <
+      appState.offsetTop + COMMENT_INPUT_HEIGHT
+    ) {
+      top = COMMENT_ICON_DIMENSION / 2;
+    }
+    if (top + COMMENT_INPUT_HEIGHT > appState.height) {
+      top = appState.height - COMMENT_INPUT_HEIGHT - COMMENT_ICON_DIMENSION / 2;
+    }
+    if (
+      left + COMMENT_INPUT_WIDTH <
+      appState.offsetLeft + COMMENT_INPUT_WIDTH
+    ) {
+      left = COMMENT_ICON_DIMENSION / 2;
+    }
+    if (left + COMMENT_INPUT_WIDTH > appState.width) {
+      left = appState.width - COMMENT_INPUT_WIDTH - COMMENT_ICON_DIMENSION / 2;
+    }
+
+    const commentThread = commentIcons[comment?.id!];
+
+    return (
+      <div
+        style={{
+          top: `${top}px`,
+          left: `${left}px`,
+          position: "absolute",
+          zIndex: 2,
+          width: `${COMMENT_INPUT_WIDTH}px`,
+          backgroundColor: "#333",
+          borderRadius: "8px",
+          padding: "12px",
+          boxShadow: "0 4px 12px rgba(0,0,0,0.1)",
+          color: "#fff",
+        }}
+      >
+        <div
+          style={{
+            display: "flex",
+            alignItems: "flex-start",
+            marginBottom: "8px",
+          }}
+        >
+          <div style={{ marginRight: "8px" }}>
+            <img
+              src={
+                commentThread.user?.image || "https://via.placeholder.com/40"
+              }
+              alt="avatar"
+              style={{
+                width: "40px",
+                height: "40px",
+                borderRadius: "50%",
+              }}
+            />
+          </div>
+          <div style={{ flex: 1 }}>
+            <div style={{ fontWeight: "bold", marginBottom: "4px" }}>
+              {commentThread.user?.name}
+            </div>
+            <div style={{ color: "#bbb", fontSize: "12px" }}>
+              {commentThread.value}
+            </div>
+          </div>
+        </div>
+        <div className="comment-thread">
+          {commentThread.replies!.map((reply, index) => (
+            <div
+              key={index}
+              style={{
+                display: "flex",
+                alignItems: "flex-start",
+                marginBottom: "8px",
+                marginLeft: "48px", // Indent replies
+              }}
+            >
+              <div style={{ marginRight: "8px" }}>
+                <img
+                  src={reply.user?.image || "https://via.placeholder.com/30"}
+                  alt="avatar"
+                  style={{
+                    width: "30px",
+                    height: "30px",
+                    borderRadius: "50%",
+                  }}
+                />
+              </div>
+              <div style={{ flex: 1 }}>
+                <div style={{ fontWeight: "bold", marginBottom: "4px" }}>
+                  {reply.user?.name}
+                </div>
+                <div style={{ color: "#bbb", fontSize: "12px" }}>
+                  {reply.value}
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+        <div style={{ marginTop: "12px" }}>
+          <textarea
+            className="comment"
+            ref={(ref) => {
+              setTimeout(() => ref?.focus());
+            }}
+            placeholder={comment.value ? "Reply" : "Comment"}
+            value={comment.value}
+            onChange={(event) => {
+              setComment({ ...comment, value: event.target.value });
+            }}
+            onBlur={saveComment}
+            onKeyDown={(event) => {
+              if (!event.shiftKey && event.key === KEYS.ENTER) {
+                event.preventDefault();
+                saveComment();
+              }
+            }}
+            style={{
+              width: "100%",
+              padding: "8px",
+              borderRadius: "4px",
+              border: "1px solid #555",
+              backgroundColor: "#444",
+              color: "#fff",
+              fontSize: "14px",
+            }}
+          />
+        </div>
+      </div>
+    );
+  };
+
   return (
     <div
-      style={{ height: "100%" }}
+      style={{ height: "100%", position: "relative", overflow: "hidden" }}
       className={clsx("excalidraw-app", {
         "is-collaborating": isCollaborating,
       })}
+      ref={appRef}
     >
       <Excalidraw
         excalidrawAPI={excalidrawRefCallback}
@@ -823,6 +1336,8 @@ const ExcalidrawWrapper = () => {
             </div>
           );
         }}
+        onPointerDown={onPointerDown}
+        onScrollChange={rerenderCommentIcons}
       >
         <AppMainMenu
           onCollabDialogOpen={onCollabDialogOpen}
@@ -855,7 +1370,12 @@ const ExcalidrawWrapper = () => {
             </OverwriteConfirmDialog.Action>
           )}
         </OverwriteConfirmDialog>
-        <AppFooter />
+        {/* <AppFooter /> */}
+        {excalidrawAPI && (
+          <Footer>
+            <CustomFooter excalidrawAPI={excalidrawAPI} />
+          </Footer>
+        )}
         <TTDDialog
           onTextSubmit={async (input) => {
             try {
@@ -1143,6 +1663,8 @@ const ExcalidrawWrapper = () => {
           ]}
         />
       </Excalidraw>
+      {Object.keys(commentIcons || []).length > 0 && renderCommentIcons()}
+      {comment && renderComment()}
     </div>
   );
 };
