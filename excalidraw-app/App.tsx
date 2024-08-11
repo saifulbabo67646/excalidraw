@@ -10,7 +10,6 @@ import {
   THEME,
   TITLE_TIMEOUT,
   VERSION_TIMEOUT,
-  DRAGGING_THRESHOLD,
 } from "../packages/excalidraw/constants";
 import { loadFromBlob } from "../packages/excalidraw/data/blob";
 import type {
@@ -35,7 +34,6 @@ import type {
   BinaryFiles,
   ExcalidrawInitialDataState,
   UIAppState,
-  Gesture,
   PointerDownState as ExcalidrawPointerDownState,
 } from "../packages/excalidraw/types";
 import type { ResolvablePromise } from "../packages/excalidraw/utils";
@@ -82,7 +80,7 @@ import {
 import { updateStaleImageStatuses } from "./data/FileManager";
 import { newElementWith } from "../packages/excalidraw/element/mutateElement";
 import { isInitializedImageElement } from "../packages/excalidraw/element/typeChecks";
-import { loadFilesFromFirebase } from "./data/firebase";
+// import { loadFilesFromFirebase } from "./data/firebase";
 import {
   LibraryIndexedDBAdapter,
   LibraryLocalStorageMigrationAdapter,
@@ -96,7 +94,7 @@ import {
 } from "../packages/excalidraw/data/library";
 import { AppMainMenu } from "./components/AppMainMenu";
 import { AppWelcomeScreen } from "./components/AppWelcomeScreen";
-import { AppFooter } from "./components/AppFooter";
+// import { AppFooter } from "./components/AppFooter";
 import { Provider, useAtom, useAtomValue } from "jotai";
 import { useAtomWithInitialValue } from "../packages/excalidraw/jotai";
 import { appJotaiStore } from "./app-jotai";

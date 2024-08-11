@@ -1,4 +1,4 @@
-import * as excalidrawLib from "../../packages/excalidraw/index";
+import { Button, MIME_TYPES } from "../../packages/excalidraw/index";
 import type { ExcalidrawImperativeAPI } from "../../packages/excalidraw/types";
 
 const COMMENT_SVG = (
@@ -23,8 +23,6 @@ const CustomFooter = ({
 }: {
   excalidrawAPI: ExcalidrawImperativeAPI;
 }) => {
-  const { Button, MIME_TYPES } = excalidrawLib;
-
   return (
     <>
       <Button
