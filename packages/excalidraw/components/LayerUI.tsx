@@ -1,5 +1,5 @@
 import clsx from "clsx";
-import React from "react";
+import React, { useState } from "react";
 import type { ActionManager } from "../actions/manager";
 import {
   CLASSES,
@@ -49,7 +49,7 @@ import { OverwriteConfirmDialog } from "./OverwriteConfirm/OverwriteConfirm";
 import { HandButton } from "./HandButton";
 import { isHandToolActive } from "../appState";
 import { TunnelsContext, useInitializeTunnels } from "../context/tunnels";
-import { LibraryIcon } from "./icons";
+import { commentIcon, LibraryIcon } from "./icons";
 import { UIAppStateContext } from "../context/ui-appState";
 import { DefaultSidebar } from "./DefaultSidebar";
 import { EyeDropper, activeEyeDropperAtom } from "./EyeDropper";
@@ -64,6 +64,8 @@ import { MagicSettings } from "./MagicSettings";
 import { TTDDialog } from "./TTDDialog/TTDDialog";
 import { Stats } from "./Stats";
 import { actionToggleStats } from "../actions";
+import { ToolButton } from "./ToolButton";
+import { TopPanel } from "./TopPanel";
 
 interface LayerUIProps {
   actionManager: ActionManager;
@@ -154,6 +156,7 @@ const LayerUI = ({
   onOpenAIAPIKeyChange,
   onMagicSettingsConfirm,
 }: LayerUIProps) => {
+  const [mouseOver, setMouseOver] = useState(false);
   const device = useDevice();
   const tunnels = useInitializeTunnels();
 
@@ -218,12 +221,13 @@ const LayerUI = ({
       })}
     >
       <Island
-        className={CLASSES.SHAPE_ACTIONS_MENU}
+        // className={CLASSES.SHAPE_ACTIONS_MENU}
         padding={2}
         style={{
           // we want to make sure this doesn't overflow so subtracting the
           // approximate height of hamburgerMenu + footer
           maxHeight: `${appState.height - 166}px`,
+          overflowY: "auto",
         }}
       >
         <SelectedShapeActions
@@ -248,10 +252,84 @@ const LayerUI = ({
 
     return (
       <FixedSideContainer side="top">
+        <div>
+          <TopPanel appState={appState} actionManager={actionManager} />
+        </div>
         <div className="App-menu App-menu_top">
           <Stack.Col gap={6} className={clsx("App-menu_top__left")}>
-            {renderCanvasActions()}
-            {shouldRenderSelectedShapeActions && renderSelectedShapeActions()}
+            {/* {renderCanvasActions()}
+            {shouldRenderSelectedShapeActions && renderSelectedShapeActions()} */}
+            <Section
+              heading="selectedShapeActions"
+              className={clsx("selected-shape-actions zen-mode-transition", {
+                "transition-left": appState.zenModeEnabled,
+              })}
+            >
+              <Island
+                className={CLASSES.SHAPE_ACTIONS_MENU}
+                padding={2}
+                style={{
+                  // we want to make sure this doesn't overflow so subtracting the
+                  // approximate height of hamburgerMenu + footer
+                  maxHeight: `${appState.height - 166}px`,
+                  ...(!mouseOver ? { width: "60px" } : {}),
+                }}
+                onMouseOver={() => setMouseOver(true)}
+                onMouseOut={() => setMouseOver(false)}
+              >
+                {/* <LockButton
+                  checked={appState.activeTool.locked}
+                  onChange={onLockToggle}
+                  title={t("toolBar.lock")}
+                />
+
+                <HandButton
+                  checked={isHandToolActive(appState)}
+                  onChange={() => onHandToolToggle()}
+                  title={t("toolBar.hand")}
+                  isMobile
+                /> */}
+
+                <div
+                  className={
+                    appState.activeTool.customType === "comment"
+                      ? "background"
+                      : ""
+                  }
+                >
+                  <ToolButton
+                    className={clsx("Shape", {
+                      fillable: false,
+                    })}
+                    type="radio"
+                    icon={commentIcon}
+                    name="editor-current-shape"
+                    checked={appState.activeTool.customType === "comment"}
+                    title="comment"
+                    aria-label="comment"
+                    data-testid={`toolbar-comment`}
+                    onChange={() => {
+                      app?.setActiveTool({
+                        type: "custom",
+                        customType: "comment",
+                      });
+                    }}
+                  >
+                    {mouseOver && (
+                      <div style={{ marginLeft: "4px" }}>Comment</div>
+                    )}
+                  </ToolButton>
+                </div>
+
+                <ShapesSwitcher
+                  appState={appState}
+                  activeTool={appState.activeTool}
+                  UIOptions={UIOptions}
+                  app={app}
+                  mouseOver={mouseOver}
+                />
+              </Island>
+            </Section>
           </Stack.Col>
           {!appState.viewModeEnabled && (
             <Section heading="shapes" className="shapes-section">
@@ -273,12 +351,12 @@ const LayerUI = ({
                           "zen-mode": appState.zenModeEnabled,
                         })}
                       >
-                        <HintViewer
+                        {/* <HintViewer
                           appState={appState}
                           isMobile={device.editor.isMobile}
                           device={device}
                           app={app}
-                        />
+                        /> */}
                         {heading}
                         <Stack.Row gap={1}>
                           <PenModeButton
@@ -288,7 +366,7 @@ const LayerUI = ({
                             title={t("toolBar.penMode")}
                             penDetected={appState.penDetected}
                           />
-                          <LockButton
+                          {/* <LockButton
                             checked={appState.activeTool.locked}
                             onChange={onLockToggle}
                             title={t("toolBar.lock")}
@@ -308,10 +386,10 @@ const LayerUI = ({
                             activeTool={appState.activeTool}
                             UIOptions={UIOptions}
                             app={app}
-                          />
+                          /> */}
                         </Stack.Row>
                       </Island>
-                      {isCollaborating && (
+                      {/* {isCollaborating && (
                         <Island
                           style={{
                             marginLeft: 8,
@@ -330,7 +408,7 @@ const LayerUI = ({
                             isMobile
                           />
                         </Island>
-                      )}
+                      )} */}
                     </Stack.Row>
                   </Stack.Col>
                 </div>
@@ -345,12 +423,12 @@ const LayerUI = ({
               },
             )}
           >
-            {appState.collaborators.size > 0 && (
+            {/* {appState.collaborators.size > 0 && (
               <UserList
                 collaborators={appState.collaborators}
                 userToFollow={appState.userToFollow?.socketId || null}
               />
-            )}
+            )} */}
             {renderTopRightUI?.(device.editor.isMobile, appState)}
             {!appState.viewModeEnabled &&
               // hide button when sidebar docked
@@ -367,6 +445,7 @@ const LayerUI = ({
                 renderCustomStats={renderCustomStats}
               />
             )}
+            {shouldRenderSelectedShapeActions && renderSelectedShapeActions()}
           </div>
         </div>
       </FixedSideContainer>
@@ -400,7 +479,7 @@ const LayerUI = ({
           tunneled away. We only render tunneled components that actually
         have defaults when host do not render anything. */}
       <DefaultMainMenu UIOptions={UIOptions} />
-      <DefaultSidebar.Trigger
+      {/* <DefaultSidebar.Trigger
         __fallback
         icon={LibraryIcon}
         title={capitalizeString(t("toolBar.library"))}
@@ -416,7 +495,7 @@ const LayerUI = ({
         tab={DEFAULT_SIDEBAR.defaultTab}
       >
         {t("toolBar.library")}
-      </DefaultSidebar.Trigger>
+      </DefaultSidebar.Trigger> */}
       <DefaultOverwriteConfirmDialog />
       {appState.openDialog?.name === "ttd" && <TTDDialog __fallback />}
       {/* ------------------------------------------------------------------ */}

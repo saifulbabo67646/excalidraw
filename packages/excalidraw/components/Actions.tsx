@@ -47,6 +47,7 @@ import {
   laserPointerToolIcon,
   OpenAIIcon,
   MagicIcon,
+  handIcon,
 } from "./icons";
 import { KEYS } from "../keys";
 import { useTunnels } from "../context/tunnels";
@@ -256,11 +257,13 @@ export const ShapesSwitcher = ({
   appState,
   app,
   UIOptions,
+  mouseOver,
 }: {
   activeTool: UIAppState["activeTool"];
   appState: UIAppState;
   app: AppClassProperties;
   UIOptions: AppProps["UIOptions"];
+  mouseOver?: boolean;
 }) => {
   const [isExtraToolsMenuOpen, setIsExtraToolsMenuOpen] = useState(false);
 
@@ -270,9 +273,45 @@ export const ShapesSwitcher = ({
 
   const { TTDDialogTriggerTunnel } = useTunnels();
 
+  const extraAction = [
+    {
+      icon: frameToolIcon,
+      value: "frame",
+      key: KEYS.F,
+      numericKey: KEYS["1"],
+      fillable: false,
+    },
+    {
+      icon: EmbedIcon,
+      value: "embeddable",
+      key: KEYS.F,
+      numericKey: KEYS["1"],
+      fillable: false,
+    },
+    {
+      icon: laserPointerToolIcon,
+      value: "laser",
+      key: KEYS.K,
+      numericKey: KEYS["1"],
+      fillable: false,
+    },
+  ];
+
+  const NEWSHAPES = [
+    {
+      icon: handIcon,
+      value: "hand",
+      key: KEYS.H,
+      numericKey: KEYS["1"],
+      fillable: false,
+    },
+    ...SHAPES,
+    ...extraAction,
+  ];
+
   return (
     <>
-      {SHAPES.map(({ value, icon, key, numericKey, fillable }, index) => {
+      {NEWSHAPES.map(({ value, icon, key, numericKey, fillable }, index) => {
         if (
           UIOptions.tools?.[
             value as Extract<typeof value, keyof AppProps["UIOptions"]["tools"]>
@@ -281,50 +320,58 @@ export const ShapesSwitcher = ({
           return null;
         }
 
-        const label = t(`toolBar.${value}`);
+        const label = t(`toolBar.${value as "frame" | "laser" | "embeddable"}`);
         const letter =
           key && capitalizeString(typeof key === "string" ? key : key[0]);
         const shortcut = letter
           ? `${letter} ${t("helpDialog.or")} ${numericKey}`
           : `${numericKey}`;
         return (
-          <ToolButton
-            className={clsx("Shape", { fillable })}
+          <div
             key={value}
-            type="radio"
-            icon={icon}
-            checked={activeTool.type === value}
-            name="editor-current-shape"
-            title={`${capitalizeString(label)} — ${shortcut}`}
-            keyBindingLabel={numericKey || letter}
-            aria-label={capitalizeString(label)}
-            aria-keyshortcuts={shortcut}
-            data-testid={`toolbar-${value}`}
-            onPointerDown={({ pointerType }) => {
-              if (!appState.penDetected && pointerType === "pen") {
-                app.togglePenMode(true);
-              }
-            }}
-            onChange={({ pointerType }) => {
-              if (appState.activeTool.type !== value) {
-                trackEvent("toolbar", value, "ui");
-              }
-              if (value === "image") {
-                app.setActiveTool({
-                  type: value,
-                  insertOnCanvasDirectly: pointerType !== "mouse",
-                });
-              } else {
-                app.setActiveTool({ type: value });
-              }
-            }}
-          />
+            className={activeTool.type === value ? "background" : ""}
+          >
+            <ToolButton
+              className={clsx("Shape", { fillable })}
+              key={value}
+              type="radio"
+              icon={icon}
+              checked={activeTool.type === value}
+              name="editor-current-shape"
+              title={`${capitalizeString(label)} — ${shortcut}`}
+              // keyBindingLabel={numericKey || letter}
+              aria-label={capitalizeString(label)}
+              aria-keyshortcuts={shortcut}
+              data-testid={`toolbar-${value}`}
+              onPointerDown={({ pointerType }) => {
+                if (!appState.penDetected && pointerType === "pen") {
+                  app.togglePenMode(true);
+                }
+              }}
+              onChange={({ pointerType }) => {
+                if (appState.activeTool.type !== value) {
+                  trackEvent("toolbar", value, "ui");
+                }
+                if (value === "image") {
+                  app.setActiveTool({
+                    type: value,
+                    insertOnCanvasDirectly: pointerType !== "mouse",
+                  });
+                } else {
+                  app.setActiveTool({
+                    type: value as "frame" | "laser" | "embeddable",
+                  });
+                }
+              }}
+            >
+              {mouseOver && <div style={{ marginLeft: "4px" }}>{label}</div>}
+            </ToolButton>
+          </div>
         );
       })}
-      <div className="App-toolbar__divider" />
 
       <DropdownMenu open={isExtraToolsMenuOpen}>
-        <DropdownMenu.Trigger
+        {/* <DropdownMenu.Trigger
           className={clsx("App-toolbar__extra-tools-trigger", {
             "App-toolbar__extra-tools-trigger--selected":
               frameToolSelected ||
@@ -357,7 +404,7 @@ export const ShapesSwitcher = ({
               AI
             </div>
           )}
-        </DropdownMenu.Trigger>
+        </DropdownMenu.Trigger> */}
         <DropdownMenu.Content
           onClickOutside={() => setIsExtraToolsMenuOpen(false)}
           onSelect={() => setIsExtraToolsMenuOpen(false)}
@@ -451,11 +498,13 @@ export const ZoomActions = ({
 export const UndoRedoActions = ({
   renderAction,
   className,
+  style,
 }: {
   renderAction: ActionManager["renderAction"];
   className?: string;
+  style?: any;
 }) => (
-  <div className={`undo-redo-buttons ${className}`}>
+  <div style={{ ...style }} className={`undo-redo-buttons ${className}`}>
     <div className="undo-button-container">
       <Tooltip label={t("buttons.undo")}>{renderAction("undo")}</Tooltip>
     </div>

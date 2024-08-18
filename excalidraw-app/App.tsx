@@ -134,12 +134,15 @@ import {
   withBatchedUpdatesThrottled,
 } from "./utils";
 import CustomFooter from "./components/CustomFooter";
+import CommentThread from "./components/comment/CommentThread";
+import { AppFooter } from "./components/AppFooter";
 
 polyfill();
 
 window.EXCALIDRAW_THROTTLE_RENDER = true;
 
-type Comment = {
+export type Comment = {
+  created_at?: string | number | Date;
   user?: any;
   x: number;
   y: number;
@@ -311,6 +314,7 @@ const initializeScene = async (opts: {
   }
 
   if (roomLinkData && opts.collabAPI) {
+    console.log("roomLinkData", roomLinkData);
     const { excalidrawAPI } = opts;
 
     const scene = await opts.collabAPI.startCollaboration(roomLinkData);
@@ -359,7 +363,8 @@ const initializeScene = async (opts: {
 const ExcalidrawWrapper = () => {
   const appRef = useRef<any>(null);
   const [errorMessage, setErrorMessage] = useState("");
-  const isCollabDisabled = isRunningInIframe();
+  // const isCollabDisabled = isRunningInIframe();
+  const isCollabDisabled = false;
 
   const [appTheme, setAppTheme] = useAtom(appThemeAtom);
   const { editorTheme } = useHandleAppTheme();
@@ -368,6 +373,7 @@ const ExcalidrawWrapper = () => {
 
   const [commentIcons, setCommentIcons] = useState<{
     [id: string]: {
+      created_at: string | number | Date;
       user: any;
       x: number;
       y: number;
@@ -393,6 +399,7 @@ const ExcalidrawWrapper = () => {
   }
 
   useEffect(() => {
+    console.log(window.location.href);
     const params = new URLSearchParams(window.location.search);
     const tokenParam = params.get("token");
     const typeParam = params.get("type");
@@ -437,6 +444,8 @@ const ExcalidrawWrapper = () => {
       if (commentJson.length > 0) {
         commentJson.forEach(
           (element: {
+            created_at: any;
+            user: any;
             comment_id: null;
             replies: any;
             id: any;
@@ -452,7 +461,9 @@ const ExcalidrawWrapper = () => {
                   y: Number(element?.y),
                   id: element?.id,
                   value: element?.value,
+                  user: element?.user,
                   replies: element?.replies,
+                  created_at: element?.created_at,
                 },
               };
             }
@@ -883,8 +894,6 @@ const ExcalidrawWrapper = () => {
     },
   };
 
-  console.log("commentIcons", commentIcons);
-
   // comment feature
   const onPointerDown = (
     activeTool: AppState["activeTool"],
@@ -962,7 +971,7 @@ const ExcalidrawWrapper = () => {
           setComment({
             x: pointerDownState.hitElement.x + 60,
             y: pointerDownState.hitElement.y,
-            value: pointerDownState.hitElement.value,
+            value: "",
             id: pointerDownState.hitElement.id,
           });
         } else {
@@ -982,6 +991,10 @@ const ExcalidrawWrapper = () => {
         { sceneX: commentIcon.x, sceneY: commentIcon.y },
         excalidrawAPI.getAppState(),
       );
+      // Fallback to user's first name initial if image is null
+      const userImage = commentIcon?.user?.image;
+      const userName = commentIcon?.user?.name;
+      const avatarFallback = userName ? userName.charAt(0).toUpperCase() : "?";
       return (
         <div
           id={commentIcon.id}
@@ -999,7 +1012,7 @@ const ExcalidrawWrapper = () => {
           className="comment-icon"
           onPointerDown={(event) => {
             event.preventDefault();
-            if (comment) {
+            if (comment && comment.value) {
               commentIcon.value = comment.value;
               updateComment();
             }
@@ -1026,10 +1039,11 @@ const ExcalidrawWrapper = () => {
           }}
         >
           <div className="comment-avatar">
-            <img
-              src="https://cdn.glitch.global/0a9ab45e-b01d-47b8-90dd-db2e125dba4e/doremon.png"
-              alt="doremon"
-            />
+            {userImage ? (
+              <img src={userImage} alt={userName} />
+            ) : (
+              <div className="avatar-fallback">{avatarFallback}</div>
+            )}
           </div>
         </div>
       );
@@ -1040,7 +1054,7 @@ const ExcalidrawWrapper = () => {
     if (!comment) {
       return;
     }
-    if (!comment.id && !comment.value) {
+    if (!comment.id || !comment.value) {
       setComment(null);
       return;
     }
@@ -1112,6 +1126,7 @@ const ExcalidrawWrapper = () => {
     const saveComment = await response.json();
     console.log(saveComment);
     const id = saveComment.id || nanoid();
+    //@TODO: lets call backend api or socket
     setCommentIcons({
       ...commentIcons,
       [id]: {
@@ -1126,6 +1141,8 @@ const ExcalidrawWrapper = () => {
   };
 
   const renderComment = () => {
+    const commentThread = commentIcons[comment?.id!];
+
     if (!comment) {
       return null;
     }
@@ -1156,8 +1173,17 @@ const ExcalidrawWrapper = () => {
       left = appState.width - COMMENT_INPUT_WIDTH - COMMENT_ICON_DIMENSION / 2;
     }
 
-    const commentThread = commentIcons[comment?.id!];
-
+    if (commentThread) {
+      return (
+        <CommentThread
+          commentThread={commentThread}
+          style={{ top, left }}
+          comment={comment}
+          setComment={setComment}
+          saveComment={saveComment}
+        />
+      );
+    }
     return (
       <div
         style={{
@@ -1165,76 +1191,12 @@ const ExcalidrawWrapper = () => {
           left: `${left}px`,
           position: "absolute",
           zIndex: 2,
-          width: `${COMMENT_INPUT_WIDTH}px`,
-          backgroundColor: "#333",
-          borderRadius: "8px",
-          padding: "12px",
+          backgroundColor: "#fff",
+          borderRadius: "20px",
           boxShadow: "0 4px 12px rgba(0,0,0,0.1)",
-          color: "#fff",
+          color: "#333",
         }}
       >
-        <div
-          style={{
-            display: "flex",
-            alignItems: "flex-start",
-            marginBottom: "8px",
-          }}
-        >
-          <div style={{ marginRight: "8px" }}>
-            <img
-              src={
-                commentThread.user?.image || "https://via.placeholder.com/40"
-              }
-              alt="avatar"
-              style={{
-                width: "40px",
-                height: "40px",
-                borderRadius: "50%",
-              }}
-            />
-          </div>
-          <div style={{ flex: 1 }}>
-            <div style={{ fontWeight: "bold", marginBottom: "4px" }}>
-              {commentThread.user?.name}
-            </div>
-            <div style={{ color: "#bbb", fontSize: "12px" }}>
-              {commentThread.value}
-            </div>
-          </div>
-        </div>
-        <div className="comment-thread">
-          {commentThread.replies!.map((reply, index) => (
-            <div
-              key={index}
-              style={{
-                display: "flex",
-                alignItems: "flex-start",
-                marginBottom: "8px",
-                marginLeft: "48px", // Indent replies
-              }}
-            >
-              <div style={{ marginRight: "8px" }}>
-                <img
-                  src={reply.user?.image || "https://via.placeholder.com/30"}
-                  alt="avatar"
-                  style={{
-                    width: "30px",
-                    height: "30px",
-                    borderRadius: "50%",
-                  }}
-                />
-              </div>
-              <div style={{ flex: 1 }}>
-                <div style={{ fontWeight: "bold", marginBottom: "4px" }}>
-                  {reply.user?.name}
-                </div>
-                <div style={{ color: "#bbb", fontSize: "12px" }}>
-                  {reply.value}
-                </div>
-              </div>
-            </div>
-          ))}
-        </div>
         <div style={{ marginTop: "12px" }}>
           <textarea
             className="comment"
@@ -1254,12 +1216,12 @@ const ExcalidrawWrapper = () => {
               }
             }}
             style={{
-              width: "100%",
+              width: "90%",
               padding: "8px",
               borderRadius: "4px",
-              border: "1px solid #555",
-              backgroundColor: "#444",
-              color: "#fff",
+              border: "1px solid #ddd",
+              backgroundColor: "#f9f9f9",
+              color: "#333",
               fontSize: "14px",
             }}
           />
@@ -1320,22 +1282,22 @@ const ExcalidrawWrapper = () => {
         handleKeyboardGlobally={true}
         autoFocus={true}
         theme={editorTheme}
-        renderTopRightUI={(isMobile) => {
-          if (isMobile || !collabAPI || isCollabDisabled) {
-            return null;
-          }
-          return (
-            <div className="top-right-ui">
-              {collabError.message && <CollabError collabError={collabError} />}
-              <LiveCollaborationTrigger
-                isCollaborating={isCollaborating}
-                onSelect={() =>
-                  setShareDialogState({ isOpen: true, type: "share" })
-                }
-              />
-            </div>
-          );
-        }}
+        // renderTopRightUI={(isMobile) => {
+        //   if (isMobile || !collabAPI || isCollabDisabled) {
+        //     return null;
+        //   }
+        //   return (
+        //     <div className="top-right-ui">
+        //       {collabError.message && <CollabError collabError={collabError} />}
+        //       <LiveCollaborationTrigger
+        //         isCollaborating={isCollaborating}
+        //         onSelect={() =>
+        //           setShareDialogState({ isOpen: true, type: "share" })
+        //         }
+        //       />
+        //     </div>
+        //   );
+        // }}
         onPointerDown={onPointerDown}
         onScrollChange={rerenderCommentIcons}
       >
@@ -1371,11 +1333,11 @@ const ExcalidrawWrapper = () => {
           )}
         </OverwriteConfirmDialog>
         {/* <AppFooter /> */}
-        {excalidrawAPI && (
+        {/* {excalidrawAPI && (
           <Footer>
             <CustomFooter excalidrawAPI={excalidrawAPI} />
           </Footer>
-        )}
+        )} */}
         <TTDDialog
           onTextSubmit={async (input) => {
             try {

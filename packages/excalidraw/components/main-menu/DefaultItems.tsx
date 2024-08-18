@@ -42,6 +42,7 @@ import type { Theme } from "../../element/types";
 import { trackEvent } from "../../analytics";
 
 import "./DefaultItems.scss";
+import { Button } from "../Button";
 
 export const LoadScene = () => {
   const { t } = useI18n();
@@ -178,14 +179,21 @@ export const ClearCanvas = () => {
   }
 
   return (
-    <DropdownMenuItem
-      icon={TrashIcon}
+    // <DropdownMenuItem
+    //   icon={TrashIcon}
+    //   onSelect={() => setActiveConfirmDialog("clearCanvas")}
+    //   data-testid="clear-canvas-button"
+    //   aria-label={t("buttons.clearReset")}
+    // >
+    //   {t("buttons.clearReset")}
+    // </DropdownMenuItem>
+    <Button
+      type="button"
       onSelect={() => setActiveConfirmDialog("clearCanvas")}
-      data-testid="clear-canvas-button"
-      aria-label={t("buttons.clearReset")}
+      className="clear-btn"
     >
-      {t("buttons.clearReset")}
-    </DropdownMenuItem>
+      Reset
+    </Button>
   );
 };
 ClearCanvas.displayName = "ClearCanvas";

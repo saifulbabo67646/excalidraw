@@ -91,3 +91,8 @@
     }
   }
 }
+.background {
+  border: 1px solid transparent;
+  border-radius: var(--border-radius-md);
+  background: var(--color-primary-light);
+}

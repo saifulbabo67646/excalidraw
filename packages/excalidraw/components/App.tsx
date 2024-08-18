@@ -1526,6 +1526,7 @@ class App extends React.Component<AppProps, AppState> {
                           UIOptions={this.props.UIOptions}
                           onExportImage={this.onExportImage}
                           renderWelcomeScreen={
+                            false &&
                             !this.state.isLoading &&
                             this.state.showWelcomeScreen &&
                             this.state.activeTool.type === "selection" &&

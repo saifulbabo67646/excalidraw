@@ -51,6 +51,7 @@ type ToolButtonProps =
   | (ToolButtonBaseProps & {
       type: "radio";
       checked: boolean;
+      children?: React.ReactNode;
       onChange?(data: { pointerType: PointerType | null }): void;
       onPointerDown?(data: { pointerType: PointerType }): void;
     });
@@ -187,6 +188,7 @@ export const ToolButton = React.forwardRef((props: ToolButtonProps, ref) => {
           <span className="ToolIcon__keybinding">{props.keyBindingLabel}</span>
         )}
       </div>
+      <div>{props.children}</div>
     </label>
   );
 });
