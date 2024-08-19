@@ -121,6 +121,8 @@ import {
   exportToPlus,
   share,
   youtubeIcon,
+  CloseIcon,
+  NewCommentIcon,
 } from "../packages/excalidraw/components/icons";
 import { appThemeAtom, useHandleAppTheme } from "./useHandleAppTheme";
 import { getPreferredLanguage } from "./app-language/language-detector";
@@ -134,8 +136,14 @@ import {
   withBatchedUpdatesThrottled,
 } from "./utils";
 import CustomFooter from "./components/CustomFooter";
-import CommentThread from "./components/comment/CommentThread";
+import CommentThread, {
+  CommentCard,
+  CommentInput,
+  LineBreaker,
+} from "./components/comment/CommentThread";
 import { AppFooter } from "./components/AppFooter";
+import { isCommentClicked } from "../packages/excalidraw/components/TopPanel";
+import "./components/comment/CommentList.scss";
 
 polyfill();
 
@@ -486,6 +494,8 @@ const ExcalidrawWrapper = () => {
     return isCollaborationLink(window.location.href);
   });
   const collabError = useAtomValue(collabErrorIndicatorAtom);
+
+  const [isCommentClick, setIsCommentClick] = useAtom(isCommentClicked);
 
   useHandleLibrary({
     excalidrawAPI,
@@ -1051,10 +1061,15 @@ const ExcalidrawWrapper = () => {
   };
 
   const saveComment = async () => {
+    console.log(comment);
     if (!comment) {
       return;
     }
-    if (!comment.id || !comment.value) {
+    if (!comment.id && !comment.value) {
+      setComment(null);
+      return;
+    }
+    if (comment.id && !comment.value) {
       setComment(null);
       return;
     }
@@ -1141,8 +1156,6 @@ const ExcalidrawWrapper = () => {
   };
 
   const renderComment = () => {
-    const commentThread = commentIcons[comment?.id!];
-
     if (!comment) {
       return null;
     }
@@ -1173,6 +1186,8 @@ const ExcalidrawWrapper = () => {
       left = appState.width - COMMENT_INPUT_WIDTH - COMMENT_ICON_DIMENSION / 2;
     }
 
+    const commentThread = commentIcons[comment?.id!];
+
     if (commentThread) {
       return (
         <CommentThread
@@ -1197,35 +1212,12 @@ const ExcalidrawWrapper = () => {
           color: "#333",
         }}
       >
-        <div style={{ marginTop: "12px" }}>
-          <textarea
-            className="comment"
-            ref={(ref) => {
-              setTimeout(() => ref?.focus());
-            }}
-            placeholder={comment.value ? "Reply" : "Comment"}
-            value={comment.value}
-            onChange={(event) => {
-              setComment({ ...comment, value: event.target.value });
-            }}
-            onBlur={saveComment}
-            onKeyDown={(event) => {
-              if (!event.shiftKey && event.key === KEYS.ENTER) {
-                event.preventDefault();
-                saveComment();
-              }
-            }}
-            style={{
-              width: "90%",
-              padding: "8px",
-              borderRadius: "4px",
-              border: "1px solid #ddd",
-              backgroundColor: "#f9f9f9",
-              color: "#333",
-              fontSize: "14px",
-            }}
-          />
-        </div>
+        <CommentInput
+          comment={comment}
+          setComment={setComment}
+          saveComment={saveComment}
+          onBlur={saveComment}
+        />
       </div>
     );
   };
@@ -1287,14 +1279,17 @@ const ExcalidrawWrapper = () => {
         //     return null;
         //   }
         //   return (
-        //     <div className="top-right-ui">
-        //       {collabError.message && <CollabError collabError={collabError} />}
-        //       <LiveCollaborationTrigger
-        //         isCollaborating={isCollaborating}
-        //         onSelect={() =>
-        //           setShareDialogState({ isOpen: true, type: "share" })
-        //         }
-        //       />
+        //     // <div className="top-right-ui">
+        //     //   {collabError.message && <CollabError collabError={collabError} />}
+        //     //   <LiveCollaborationTrigger
+        //     //     isCollaborating={isCollaborating}
+        //     //     onSelect={() =>
+        //     //       setShareDialogState({ isOpen: true, type: "share" })
+        //     //     }
+        //     //   />
+        //     // </div>
+        //     <div style={{ height: "400px", width: "275px" }}>
+        //       <h2>Hello comment!!!</h2>
         //     </div>
         //   );
         // }}
@@ -1627,6 +1622,45 @@ const ExcalidrawWrapper = () => {
       </Excalidraw>
       {Object.keys(commentIcons || []).length > 0 && renderCommentIcons()}
       {comment && renderComment()}
+      {isCommentClick && (
+        <div
+          style={{
+            position: "absolute",
+            top: 50,
+            right: 0,
+            zIndex: 2,
+            width: "275px",
+            backgroundColor: "#fff",
+            borderRadius: "5px 0 0 5px",
+            boxShadow: "0 4px 12px rgba(0,0,0,0.1)",
+          }}
+        >
+          <div className="comment-header">
+            <div className="comment-list-header">
+              <button className="comment-header-icon">
+                <NewCommentIcon />
+              </button>
+              <div className="comment-header-title">Comment</div>
+            </div>
+            <div
+              onClick={() => setIsCommentClick(!isCommentClick)}
+              className="comment-header-close-icon"
+            >
+              {CloseIcon}
+            </div>
+          </div>
+          <LineBreaker />
+          <div style={{ overflowY: "auto", height: "calc(100vh - 110px)" }}>
+            {Object.keys(commentIcons || []).length > 0
+              ? Object.values(commentIcons).map((singleComment) => {
+                  return (
+                    <CommentCard data={singleComment} showLineBreak={true} />
+                  );
+                })
+              : "No Comments"}
+          </div>
+        </div>
+      )}
     </div>
   );
 };

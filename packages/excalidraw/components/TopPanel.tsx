@@ -7,8 +7,12 @@ import clsx from "clsx";
 import { ClearCanvas } from "./main-menu/DefaultItems";
 import { UserList } from "./UserList";
 import { ButtonIcon } from "./ButtonIcon";
-import { commentIcon } from "./icons";
+import { commentIcon, DownloadIcon, NewCommentIcon } from "./icons";
 import { Button } from "./Button";
+import { useExcalidrawSetAppState } from "./App";
+import { atom, useAtom } from "jotai";
+
+export const isCommentClicked = atom(false);
 
 export const TopPanel = ({
   appState,
@@ -17,6 +21,8 @@ export const TopPanel = ({
   appState: UIAppState;
   actionManager: ActionManager;
 }) => {
+  const setAppState = useExcalidrawSetAppState();
+  const [isCommentClick, setIsCommentClicked] = useAtom(isCommentClicked);
   return (
     <div className="top-panel">
       {/* Left Section */}
@@ -60,11 +66,19 @@ export const TopPanel = ({
           )}
         </div>
         <div className="actions">
-          <button className="action-btn">🗨️</button>
-          <button className="action-btn">🖨️</button>
-          <button className="action-btn download-btn">⬇️</button>
+          <button
+            onClick={() => setIsCommentClicked(!isCommentClick)}
+            className="action-btn"
+          >
+            <NewCommentIcon />
+          </button>
+          <button
+            onClick={() => setAppState({ openDialog: { name: "imageExport" } })}
+            className="action-btn download-btn"
+          >
+            <DownloadIcon />
+          </button>
           <button className="save-btn">SAVE</button>
-          <button className="close-btn">✖</button>
         </div>
       </div>
     </div>

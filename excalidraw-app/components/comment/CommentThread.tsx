@@ -1,8 +1,13 @@
 import React from "react";
 import type { Comment } from "../../App";
 import { KEYS } from "../../../packages/excalidraw/keys";
-import { CloseIcon } from "../../../packages/excalidraw/components/icons";
+import {
+  CloseIcon,
+  SendIcon,
+  ThreedotIcon,
+} from "../../../packages/excalidraw/components/icons";
 import { t } from "../../../packages/excalidraw/i18n";
+import "./CommentThread.scss";
 
 type CommentThreadProps = {
   commentThread: any;
@@ -12,67 +17,100 @@ type CommentThreadProps = {
   saveComment: () => void;
 };
 
-export const CommentCard = ({ data }: { data: any }) => {
+export const CommentInput = ({
+  comment,
+  setComment,
+  saveComment,
+  onBlur,
+}: {
+  comment: Comment;
+  setComment: (comment: Comment | null) => void;
+  saveComment: () => void;
+  onBlur?: () => void;
+}) => {
   return (
-    <div>
-      <div
-        style={{
-          display: "flex",
-          alignItems: "flex-start",
-          marginBottom: "8px",
-          padding: "12px",
+    <div className="comment-input-container">
+      <textarea
+        className="comment-input"
+        ref={(ref) => {
+          setTimeout(() => ref?.focus());
         }}
-      >
-        <div style={{ marginRight: "8px" }}>
-          <img
-            src={data.user?.image || "https://via.placeholder.com/40"}
-            alt="avatar"
-            style={{
-              width: "24px",
-              height: "24px",
-              borderRadius: "50%",
-            }}
-          />
-        </div>
-        <div>
-          <div
-            style={{
-              fontWeight: "500",
-              color: "#38393C",
-              fontSize: "12px",
-              marginBottom: "4px",
-            }}
-          >
-            {data.user?.name}
+        placeholder={comment.value ? "Reply" : "Add a comment"}
+        value={comment.value}
+        onChange={(event) => {
+          setComment({ ...comment, value: event.target.value });
+        }}
+        onBlur={onBlur}
+        onKeyDown={(event) => {
+          if (!event.shiftKey && event.key === KEYS.ENTER) {
+            event.preventDefault();
+            saveComment();
+          }
+        }}
+      />
+      <button className="comment-send-button" onClick={saveComment}>
+        <SendIcon />
+      </button>
+    </div>
+  );
+};
+
+export const CommentCard = ({
+  data,
+  showLineBreak,
+}: {
+  data: any;
+  showLineBreak?: boolean;
+}) => {
+  return (
+    <div className="comment-card-wrapper">
+      <div className="comment-card-header-wrapper">
+        <div className="comment-card-header">
+          <div style={{ marginRight: "8px" }}>
+            <img
+              src={data.user?.image || "https://via.placeholder.com/40"}
+              alt="avatar"
+              style={{
+                width: "24px",
+                height: "24px",
+                borderRadius: "50%",
+              }}
+            />
           </div>
-        </div>
-        <div>
-          <div
-            style={{
-              color: "#98A1A9",
-              fontWeight: "500",
-              fontSize: "12px",
-            }}
-          >
+          <div className="card-header-name">{data.user?.name}</div>
+          <div className="card-header-date">
             {new Date(data.created_at).toLocaleTimeString([], {
               hour: "2-digit",
               minute: "2-digit",
             })}
           </div>
         </div>
-      </div>
-      <div>
-        <div
-          style={{
-            color: "#38393C",
-            fontWeight: "500",
-            marginTop: "4px",
-          }}
-        >
-          {data.value}
+        <div className="threedot-icon-wrapper">
+          <button className="comment-threedot-icon">
+            <ThreedotIcon />
+          </button>
         </div>
       </div>
+      <div className="comment-value-wrapper">
+        <p className="comment-value">{data.value}</p>
+      </div>
+      {showLineBreak && <LineBreaker />}
     </div>
+  );
+};
+
+export const LineBreaker = ({
+  style,
+}: {
+  style?: React.CSSProperties | undefined;
+}) => {
+  return (
+    <div
+      style={{
+        ...style,
+        borderBottom: "1px solid var(--Greyscale-200, #DCE0E3)",
+      }}
+    ></div>
   );
 };
 
@@ -83,21 +121,6 @@ const CommentThread = ({
   setComment,
   saveComment,
 }: CommentThreadProps) => {
-  const LineBreaker = ({
-    style,
-  }: {
-    style?: React.CSSProperties | undefined;
-  }) => {
-    return (
-      <div
-        style={{
-          ...style,
-          borderBottom: "1px solid var(--Greyscale-200, #DCE0E3)",
-        }}
-      ></div>
-    );
-  };
-
   return (
     <div
       style={{
@@ -126,7 +149,9 @@ const CommentThread = ({
         </div>
       </div>
       <LineBreaker />
-      <div style={{}}>
+      <div
+        style={{ overflowY: "auto", maxHeight: "300px", marginBottom: "8px" }}
+      >
         <CommentCard data={commentThread} />
         <LineBreaker />
         <div className="comment-thread">
@@ -140,36 +165,12 @@ const CommentThread = ({
               ),
             )}
         </div>
-        <div style={{ marginTop: "12px" }}>
-          <textarea
-            className="comment"
-            ref={(ref) => {
-              setTimeout(() => ref?.focus());
-            }}
-            placeholder={comment.value ? "Reply" : "Comment"}
-            value={comment.value}
-            onChange={(event) => {
-              setComment({ ...comment, value: event.target.value });
-            }}
-            // onBlur={saveComment} //@TODO: uncomment after development
-            onKeyDown={(event) => {
-              if (!event.shiftKey && event.key === KEYS.ENTER) {
-                event.preventDefault();
-                saveComment();
-              }
-            }}
-            style={{
-              width: "90%",
-              padding: "8px",
-              borderRadius: "4px",
-              border: "1px solid #ddd",
-              backgroundColor: "#f9f9f9",
-              color: "#333",
-              fontSize: "14px",
-            }}
-          />
-        </div>
       </div>
+      <CommentInput
+        comment={comment}
+        setComment={setComment}
+        saveComment={saveComment}
+      />
     </div>
   );
 };

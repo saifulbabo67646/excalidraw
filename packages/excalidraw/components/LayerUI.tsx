@@ -252,9 +252,7 @@ const LayerUI = ({
 
     return (
       <FixedSideContainer side="top">
-        <div>
-          <TopPanel appState={appState} actionManager={actionManager} />
-        </div>
+        <TopPanel appState={appState} actionManager={actionManager} />
         <div className="App-menu App-menu_top">
           <Stack.Col gap={6} className={clsx("App-menu_top__left")}>
             {/* {renderCanvasActions()}
@@ -273,6 +271,8 @@ const LayerUI = ({
                   // approximate height of hamburgerMenu + footer
                   maxHeight: `${appState.height - 166}px`,
                   ...(!mouseOver ? { width: "60px" } : {}),
+                  marginTop: "20px",
+                  left: "20px",
                 }}
                 onMouseOver={() => setMouseOver(true)}
                 onMouseOut={() => setMouseOver(false)}

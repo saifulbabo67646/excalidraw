@@ -1,0 +1,85 @@
+.comment-thread{
+    width: 300px;
+}
+
+.comment-card-wrapper {
+    padding: 8px;
+
+    .comment-card-header-wrapper {
+        display: flex;
+        align-items: flex-start;
+
+        .comment-card-header {
+            display: flex;
+            align-items: flex-start;
+            justify-content: space-between;
+        }
+        .card-header-name {
+            font-weight: 500;
+            color: #38393C;
+            font-size: 12px;
+            margin: 4px;
+        }
+        .card-header-date {
+            color: #98A1A9;
+            font-weight: 500;
+            font-size: 12px;
+            margin: 4px;
+            margin-top: 7px;
+        }
+    }
+    
+    .threedot-icon-wrapper {
+        margin: 4px;
+        margin-top: 7px;
+    
+        .comment-threedot-icon {
+            background: none;
+            border: none;
+            height: 16px;
+            width: 16px;
+        }
+    }
+    .comment-value-wrapper {
+        padding: 4px;
+        
+        .comment-value {
+            color: #38393C;
+            font-weight: 500;
+            margin-top: 4px;
+        }
+    }
+}
+
+.comment-input-container {
+    display: flex;
+    align-items: center;
+    border: 1px solid #ddd;
+    border-radius: 12px;
+    padding: 8px 12px;
+    width: 100%;
+    box-sizing: border-box;
+  }
+  
+  .comment-input {
+    width: 100%;
+    border: none;
+    outline: none;
+    background-color: transparent;
+    font-size: 14px;
+    color: #333;
+    resize: none;
+    padding: 0;
+    margin-right: 8px;
+    font-family: inherit; /* Matches input to surrounding text styling */
+  }
+  
+  .comment-send-button {
+    background-color: transparent;
+    border: none;
+    outline: none;
+    cursor: pointer;
+    padding: 0;
+    width: 24px;
+    height: 24px;
+  }

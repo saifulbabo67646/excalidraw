@@ -1,0 +1,39 @@
+
+.comment-header {
+
+    height: 48px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+
+    .comment-list-header {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        padding: 5px 25px;
+        height: 48px;
+    }
+
+    .comment-header-icon {
+        background: none;
+        border: none;
+        font-size: 16px;
+        padding: 5px;
+        height: 24px;
+        width: 24px;
+    }
+
+    .comment-header-title {
+        font-size: 14px;
+        font-weight: 600;
+        margin-left: 8px;
+        margin-top: 4px;
+    }
+
+    .comment-header-close-icon {
+        margin-right: 12px;
+        margin-top: 4px;
+        height: 24px;
+        width: 24px;
+    }
+}
