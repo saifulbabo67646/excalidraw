@@ -85,6 +85,7 @@ export const generateRoughOptions = (
 
   switch (element.type) {
     case "rectangle":
+    case "blackout":
     case "iframe":
     case "embeddable":
     case "diamond":
@@ -293,8 +294,11 @@ export const _generateElementShape = (
   switch (element.type) {
     case "rectangle":
     case "iframe":
+    case "blackout":
     case "embeddable": {
-      let shape: ElementShapes[typeof element.type];
+      // If the element is a blackout, treat it as a rectangle
+      const elementType = element.type === "blackout" ? "rectangle" : element.type;
+      let shape: ElementShapes[typeof elementType];
       // this is for rendering the stroke/bg of the embeddable, especially
       // when the src url is not set
 

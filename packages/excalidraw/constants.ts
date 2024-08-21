@@ -390,6 +390,7 @@ export const LIBRARY_DISABLED_TYPES = new Set([
 export const TOOL_TYPE = {
   selection: "selection",
   rectangle: "rectangle",
+  blackout: "blackout",
   diamond: "diamond",
   ellipse: "ellipse",
   arrow: "arrow",

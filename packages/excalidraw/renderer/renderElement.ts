@@ -59,6 +59,7 @@ import { LinearElementEditor } from "../element/linearElementEditor";
 import { getContainingFrame } from "../frame";
 import { ShapeCache } from "../scene/ShapeCache";
 import { getVerticalOffset } from "../fonts";
+import { COLOR_PALETTE } from "../colors";
 
 // using a stronger invert (100% vs our regular 93%) and saturate
 // as a temp hack to make images in dark theme look closer to original
@@ -910,6 +911,18 @@ export const renderElement = (
         // reset
         context.imageSmoothingEnabled = currentImageSmoothingStatus;
       }
+      break;
+    }
+    case "blackout": {
+      ShapeCache.generateElementShape(element, renderConfig);
+      context.save();
+      context.fillStyle = element.backgroundColor == "transparent" ? COLOR_PALETTE.black : element.backgroundColor; // Set the fill color to black
+      context.translate(
+        element.x + appState.scrollX,
+        element.y + appState.scrollY,
+      );
+      context.fillRect(0, 0, element.width, element.height); // Draw the blackout rectangle
+      context.restore();
       break;
     }
     default: {

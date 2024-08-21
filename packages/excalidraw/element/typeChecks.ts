@@ -200,6 +200,7 @@ export const isExcalidrawElement = (
     case "text":
     case "diamond":
     case "rectangle":
+    case "blackout":
     case "iframe":
     case "embeddable":
     case "ellipse":
@@ -241,6 +242,7 @@ export const isBoundToContainer = (
 
 export const isUsingAdaptiveRadius = (type: string) =>
   type === "rectangle" ||
+  type === "blackout" ||
   type === "embeddable" ||
   type === "iframe" ||
   type === "image";

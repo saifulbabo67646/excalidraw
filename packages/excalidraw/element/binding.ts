@@ -8,6 +8,7 @@ import type {
   ExcalidrawBindableElement,
   ExcalidrawElement,
   ExcalidrawRectangleElement,
+  ExcalidrawBlackoutElement,
   ExcalidrawDiamondElement,
   ExcalidrawEllipseElement,
   ExcalidrawFreeDrawElement,
@@ -1362,6 +1363,7 @@ export const distanceToBindableElement = (
 const distanceToRectangle = (
   element:
     | ExcalidrawRectangleElement
+    | ExcalidrawBlackoutElement
     | ExcalidrawTextElement
     | ExcalidrawFreeDrawElement
     | ExcalidrawImageElement
@@ -1670,6 +1672,7 @@ const getSortedElementLineIntersections = (
 const getCorners = (
   element:
     | ExcalidrawRectangleElement
+    | ExcalidrawBlackoutElement
     | ExcalidrawImageElement
     | ExcalidrawDiamondElement
     | ExcalidrawTextElement
@@ -1681,6 +1684,7 @@ const getCorners = (
   const hy = (scale * element.height) / 2;
   switch (element.type) {
     case "rectangle":
+    case "blackout":
     case "image":
     case "text":
     case "iframe":
@@ -1832,6 +1836,7 @@ const findFocusPointForEllipse = (
 const findFocusPointForRectangulars = (
   element:
     | ExcalidrawRectangleElement
+    | ExcalidrawBlackoutElement
     | ExcalidrawImageElement
     | ExcalidrawDiamondElement
     | ExcalidrawTextElement

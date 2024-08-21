@@ -255,7 +255,8 @@
     "hand": "手 (パンニングツール)",
     "extraTools": "その他のツール",
     "mermaidToExcalidraw": "",
-    "magicSettings": ""
+    "magicSettings": "",
+    "blackout": "ブラックアウト"
   },
   "headings": {
     "canvasActions": "キャンバス操作",

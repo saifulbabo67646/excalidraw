@@ -64,6 +64,7 @@ export const AllowedExcalidrawActiveTools: Record<
   selection: true,
   text: true,
   rectangle: true,
+  blackout: true,
   diamond: true,
   ellipse: true,
   line: true,
