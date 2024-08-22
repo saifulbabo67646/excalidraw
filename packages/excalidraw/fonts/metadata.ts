@@ -109,6 +109,16 @@ export const FONT_METADATA: Record<number, FontMetadata> = {
     icon: FontFamilyNormalIcon,
     serverSide: true,
   },
+  [FONT_FAMILY.Arial]: {
+    metrics: {
+      unitsPerEm: 2048,
+      ascender: 1577,
+      descender: -471,
+      lineHeight: 1.15,
+    },
+    icon: FontFamilyNormalIcon,
+    local: true,
+  },
 };
 
 /** Unicode ranges */
