@@ -88,6 +88,10 @@ export type ExcalidrawRectangleElement = _ExcalidrawElementBase & {
   type: "rectangle";
 };
 
+export type ExcalidrawBlackoutElement = _ExcalidrawElementBase & {
+  type: "blackout";
+};
+
 export type ExcalidrawDiamondElement = _ExcalidrawElementBase & {
   type: "diamond";
 };
@@ -157,6 +161,7 @@ export type ExcalidrawFrameLikeElement =
 export type ExcalidrawGenericElement =
   | ExcalidrawSelectionElement
   | ExcalidrawRectangleElement
+  | ExcalidrawBlackoutElement
   | ExcalidrawDiamondElement
   | ExcalidrawEllipseElement;
 

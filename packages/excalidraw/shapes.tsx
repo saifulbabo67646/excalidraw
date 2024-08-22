@@ -8,6 +8,7 @@ import {
 } from "../utils/geometry/shape";
 import {
   ArrowIcon,
+  BlackOutIcon,
   DiamondIcon,
   EllipseIcon,
   EraserIcon,
@@ -39,6 +40,13 @@ export const SHAPES = [
     value: "rectangle",
     key: KEYS.R,
     numericKey: KEYS["2"],
+    fillable: true,
+  },
+  {
+    icon: BlackOutIcon,
+    value: "blackout",
+    key: KEYS.R,
+    numericKey: KEYS["1"],
     fillable: true,
   },
   {
@@ -121,7 +129,8 @@ export const getElementShape = (
   elementsMap: ElementsMap,
 ): GeometricShape => {
   switch (element.type) {
-    case "rectangle":
+    case "rectangle":  
+    case "blackout":
     case "diamond":
     case "frame":
     case "magicframe":

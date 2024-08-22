@@ -7,6 +7,7 @@ import type { ElementOrToolType } from "../types";
 
 export const hasBackground = (type: ElementOrToolType) =>
   type === "rectangle" ||
+  type === "blackout" ||
   type === "iframe" ||
   type === "embeddable" ||
   type === "ellipse" ||
@@ -15,7 +16,7 @@ export const hasBackground = (type: ElementOrToolType) =>
   type === "freedraw";
 
 export const hasStrokeColor = (type: ElementOrToolType) =>
-  type !== "image" && type !== "frame" && type !== "magicframe";
+  type !== "image" && type !== "frame" && type !== "magicframe" && type !== "blackout";
 
 export const hasStrokeWidth = (type: ElementOrToolType) =>
   type === "rectangle" ||

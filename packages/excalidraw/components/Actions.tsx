@@ -70,6 +70,7 @@ export const canChangeStrokeColor = (
     (hasStrokeColor(appState.activeTool.type) &&
       appState.activeTool.type !== "image" &&
       commonSelectedType !== "image" &&
+      commonSelectedType !== "blackout" &&
       commonSelectedType !== "frame" &&
       commonSelectedType !== "magicframe") ||
     targetElements.some((element) => hasStrokeColor(element.type))
@@ -80,9 +81,11 @@ export const canChangeBackgroundColor = (
   appState: UIAppState,
   targetElements: ExcalidrawElement[],
 ) => {
+  let commonSelectedType: ExcalidrawElementType | null =
+  targetElements[0]?.type || null;
   return (
-    hasBackground(appState.activeTool.type) ||
-    targetElements.some((element) => hasBackground(element.type))
+    (hasBackground(appState.activeTool.type) ||
+    targetElements.some((element) => hasBackground(element.type))) && appState.activeTool.type !== "blackout" && commonSelectedType !== "blackout"
   );
 };
 
@@ -111,6 +114,7 @@ export const SelectedShapeActions = ({
 
   const showFillIcons =
     (hasBackground(appState.activeTool.type) &&
+      appState.activeTool.type !== "blackout" &&
       !isTransparent(appState.currentItemBackgroundColor)) ||
     targetElements.some(
       (element) =>

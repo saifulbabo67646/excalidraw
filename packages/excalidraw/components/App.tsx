@@ -7160,6 +7160,7 @@ class App extends React.Component<AppProps, AppState> {
     elementType:
       | "selection"
       | "rectangle"
+      | "blackout"
       | "diamond"
       | "ellipse"
       | "iframe"

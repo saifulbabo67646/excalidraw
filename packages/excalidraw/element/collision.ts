@@ -4,6 +4,7 @@ import type {
   ElementsMap,
   ExcalidrawElement,
   ExcalidrawRectangleElement,
+  ExcalidrawBlackoutElement,
 } from "./types";
 
 import { getElementBounds } from "./bounds";
@@ -69,7 +70,7 @@ export const hitElementItself = ({
   if (!hit && frameNameBound) {
     hit = isPointInShape([x, y], {
       type: "polygon",
-      data: getPolygonShape(frameNameBound as ExcalidrawRectangleElement)
+      data: getPolygonShape(frameNameBound as ExcalidrawRectangleElement | ExcalidrawBlackoutElement)
         .data as Polygon,
     });
   }

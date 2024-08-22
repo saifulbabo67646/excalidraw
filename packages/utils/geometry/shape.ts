@@ -15,6 +15,7 @@
 import { getElementAbsoluteCoords } from "../../excalidraw/element";
 import type {
   ElementsMap,
+  ExcalidrawBlackoutElement,
   ExcalidrawDiamondElement,
   ExcalidrawElement,
   ExcalidrawEllipseElement,
@@ -93,6 +94,7 @@ export type GeometricShape =
 
 type RectangularElement =
   | ExcalidrawRectangleElement
+  | ExcalidrawBlackoutElement
   | ExcalidrawDiamondElement
   | ExcalidrawFrameLikeElement
   | ExcalidrawEmbeddableElement
