@@ -58,9 +58,18 @@ export const CommentInput = ({
 export const CommentCard = ({
   data,
   showLineBreak,
+  showCommentCount,
+  commentCount,
+  handleMoveToComment,
 }: {
   data: any;
   showLineBreak?: boolean;
+  showCommentCount?: boolean;
+  commentCount?: number;
+  handleMoveToComment?: (
+    e: React.MouseEvent<HTMLDivElement>,
+    comment: Comment,
+  ) => void;
 }) => {
   return (
     <div className="comment-card-wrapper">
@@ -94,6 +103,15 @@ export const CommentCard = ({
       <div className="comment-value-wrapper">
         <p className="comment-value">{data.value}</p>
       </div>
+      {showCommentCount && (
+        <div
+          onClick={(e) => handleMoveToComment && handleMoveToComment(e, data)}
+          className="comment-count-wrapper"
+        >
+          <div className="comment-count">{commentCount} reply</div>
+        </div>
+      )}
+
       {showLineBreak && <LineBreaker />}
     </div>
   );

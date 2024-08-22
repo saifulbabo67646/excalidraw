@@ -27,6 +27,7 @@ import {
   StoreAction,
   reconcileElements,
   Footer,
+  getVisibleSceneBounds,
 } from "../packages/excalidraw";
 import type {
   AppState,
@@ -144,6 +145,7 @@ import CommentThread, {
 import { AppFooter } from "./components/AppFooter";
 import { isCommentClicked } from "../packages/excalidraw/components/TopPanel";
 import "./components/comment/CommentList.scss";
+import initEcho from "./data/echo";
 
 polyfill();
 
@@ -394,6 +396,7 @@ const ExcalidrawWrapper = () => {
   const [token, setToken] = useState<string | null>(null);
   const [userType, setUserType] = useState<string | null>(null);
   const [user, setUser] = useState<any | null>(null);
+  const [scrollChange, setScrollChange] = useState<boolean>(false);
 
   // initial state
   // ---------------------------------------------------------------------------
@@ -435,55 +438,75 @@ const ExcalidrawWrapper = () => {
       });
       const json = await response.json();
       setUser(json.data);
-      // lets fetch comment from the api
-      const roomLinkData = getCollaborationLinkData(window.location.href);
-      const commentResponse = await fetch(
-        `${VITE_APP_TAIGA_BACKEND_URL}/rooms/${roomLinkData?.roomId}/comments`,
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-            Accept: "application/json",
-            "Content-Type": "application/json",
-          },
-        },
-      );
-      const commentJson = await commentResponse.json();
-      let tempObj = {};
-      if (commentJson.length > 0) {
-        commentJson.forEach(
-          (element: {
-            created_at: any;
-            user: any;
-            comment_id: null;
-            replies: any;
-            id: any;
-            x: number;
-            y: any;
-            value: any;
-          }) => {
-            if (element.comment_id === null) {
-              tempObj = {
-                ...tempObj,
-                [element?.id]: {
-                  x: element?.id ? element?.x - 60 : element.x,
-                  y: Number(element?.y),
-                  id: element?.id,
-                  value: element?.value,
-                  user: element?.user,
-                  replies: element?.replies,
-                  created_at: element?.created_at,
-                },
-              };
-            }
-          },
-        );
-        setCommentIcons(tempObj);
-      }
+      token && (await getAllComment(token));
     };
     if (token) {
       fetchData();
     }
   }, [token, userType]);
+
+  const getAllComment = async (token: string) => {
+    // lets fetch comment from the api
+    const roomLinkData = getCollaborationLinkData(window.location.href);
+    const commentResponse = await fetch(
+      `${VITE_APP_TAIGA_BACKEND_URL}/rooms/${roomLinkData?.roomId}/comments`,
+      {
+        headers: {
+          Authorization: `Bearer ${token}`,
+          Accept: "application/json",
+          "Content-Type": "application/json",
+        },
+      },
+    );
+    const commentJson = await commentResponse.json();
+    let tempObj = {};
+    if (commentJson.length > 0) {
+      commentJson.forEach(
+        (element: {
+          created_at: any;
+          user: any;
+          comment_id: null;
+          replies: any;
+          id: any;
+          x: number;
+          y: any;
+          value: any;
+        }) => {
+          if (element.comment_id === null) {
+            tempObj = {
+              ...tempObj,
+              [element?.id]: {
+                x: element?.id ? element?.x - 60 : element.x,
+                y: Number(element?.y),
+                id: element?.id,
+                value: element?.value,
+                user: element?.user,
+                replies: element?.replies,
+                created_at: element?.created_at,
+              },
+            };
+          }
+        },
+      );
+      setCommentIcons(tempObj);
+    }
+  };
+
+  useEffect(() => {
+    const listenForCommentUpdates = (echo: any, roomId: string) => {
+      echo
+        .join(`annotation.room.${roomId}`)
+        .listen(".room.message", (e: { comment: any }) => {
+          token && getAllComment(token);
+        })
+        .error((err: any) => console.log(err));
+    };
+    const roomLinkData = getCollaborationLinkData(window.location.href);
+    if (token && roomLinkData?.roomId) {
+      const echo = initEcho(token);
+      listenForCommentUpdates(echo, roomLinkData?.roomId);
+    }
+  }, [token]);
 
   const [excalidrawAPI, excalidrawRefCallback] =
     useCallbackRefState<ExcalidrawImperativeAPI>();
@@ -904,6 +927,42 @@ const ExcalidrawWrapper = () => {
     },
   };
 
+  const handleMoveToComment = (
+    e: React.MouseEvent<HTMLDivElement>,
+    comment: Comment,
+  ) => {
+    const commentIconsElements = appRef.current.querySelectorAll(
+      ".comment-icon",
+    ) as HTMLElement[];
+    commentIconsElements.forEach((ele) => {
+      const id = ele.id;
+      if (Number(comment.id) === Number(id)) {
+        const appstate = excalidrawAPI?.getAppState();
+        if (appstate) {
+          const { x, y } = sceneCoordsToViewportCoords(
+            { sceneX: comment?.x, sceneY: comment?.y },
+            appstate,
+          );
+          excalidrawAPI?.updateScene({
+            appState: {
+              scrollX: appstate.scrollX - x + e.clientX / 2,
+              scrollY: appstate.scrollY - y + e.clientY / 2,
+            },
+          });
+        }
+
+        setTimeout(() => {
+          setComment({
+            x: comment.x + 60,
+            y: comment.y,
+            value: "",
+            id: comment.id,
+          });
+        }, 300);
+      }
+    });
+  };
+
   // comment feature
   const onPointerDown = (
     activeTool: AppState["activeTool"],
@@ -919,9 +978,13 @@ const ExcalidrawWrapper = () => {
     if (!excalidrawAPI) {
       return false;
     }
+    comment && setComment(null);
     const commentIconsElements = appRef.current.querySelectorAll(
       ".comment-icon",
     ) as HTMLElement[];
+    if (commentIconsElements.length > 0) {
+      setScrollChange(true);
+    }
     commentIconsElements.forEach((ele) => {
       const id = ele.id;
       const appstate = excalidrawAPI.getAppState();
@@ -943,6 +1006,10 @@ const ExcalidrawWrapper = () => {
   ) => {
     return withBatchedUpdatesThrottled((event) => {
       if (!excalidrawAPI) {
+        return false;
+      }
+      if (scrollChange) {
+        setScrollChange(false);
         return false;
       }
       const { x, y } = viewportCoordsToSceneCoords(
@@ -976,6 +1043,9 @@ const ExcalidrawWrapper = () => {
         event.clientX,
         event.clientY,
       );
+      if (scrollChange) {
+        setScrollChange(false);
+      }
       if (distance === 0) {
         if (!comment) {
           setComment({
@@ -1654,7 +1724,13 @@ const ExcalidrawWrapper = () => {
             {Object.keys(commentIcons || []).length > 0
               ? Object.values(commentIcons).map((singleComment) => {
                   return (
-                    <CommentCard data={singleComment} showLineBreak={true} />
+                    <CommentCard
+                      data={singleComment}
+                      showLineBreak={true}
+                      showCommentCount={!(singleComment?.replies?.length! < 1)}
+                      commentCount={singleComment?.replies?.length}
+                      handleMoveToComment={handleMoveToComment}
+                    />
                   );
                 })
               : "No Comments"}

@@ -4,6 +4,7 @@
 
 .comment-card-wrapper {
     padding: 8px;
+    max-width: 300px;
 
     .comment-card-header-wrapper {
         display: flex;
@@ -47,6 +48,18 @@
             color: #38393C;
             font-weight: 500;
             margin-top: 4px;
+        }
+    }
+
+    .comment-count-wrapper {
+        padding: 4px;
+        padding-bottom: 12px;
+        cursor: pointer;
+
+        .comment-count {
+            line-height: 16px;
+            font-weight: 500;
+            color: #029AED;
         }
     }
 }
