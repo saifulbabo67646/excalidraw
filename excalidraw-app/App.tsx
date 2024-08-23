@@ -411,10 +411,27 @@ const ExcalidrawWrapper = () => {
 
   useEffect(() => {
     console.log(window.location.href);
+  
+    let tokenParam;
+    if (process.env.NODE_ENV === "production") {
+      // In production, get the token from cookies
+      const cookies = document.cookie.split("; ");
+      const tokenCookie = cookies.find(cookie => cookie.startsWith("token="));
+      
+      if (tokenCookie) {
+        tokenParam = tokenCookie.split("=")[1];
+      }
+    } else {
+      // In development, get the token from URL parameters
+      const params = new URLSearchParams(window.location.search);
+      tokenParam = params.get("token");
+    }
+  
     const params = new URLSearchParams(window.location.search);
-    const tokenParam = params.get("token");
     const typeParam = params.get("type");
-    setToken(tokenParam);
+    if(tokenParam){
+      setToken(tokenParam);
+    }
     setUserType(typeParam);
     trackEvent("load", "frame", getFrame());
     // Delayed so that the app has a time to load the latest SW
