@@ -435,6 +435,11 @@ const ExcalidrawWrapper = () => {
 
       if (tokenCookie) {
         tokenParam = tokenCookie.split("=")[1];
+      } else {
+        //@TODO: this logic for temporary as the cookie sharing not working.
+        // In development, get the token from URL parameters
+        const params = new URLSearchParams(window.location.search);
+        tokenParam = params.get("token");
       }
     } else {
       // In development, get the token from URL parameters
@@ -1497,10 +1502,9 @@ const ExcalidrawWrapper = () => {
           left: `${left}px`,
           position: "absolute",
           zIndex: 2,
-          backgroundColor: "#fff",
-          borderRadius: "20px",
-          boxShadow: "0 4px 12px rgba(0,0,0,0.1)",
-          color: "#333",
+          backgroundColor: "#FFFFFF",
+          borderRadius: "16px",
+          boxShadow: "0px 1px 5px 0px #0000002E",
         }}
       >
         <CommentInput
