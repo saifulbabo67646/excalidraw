@@ -574,7 +574,7 @@ const ExcalidrawWrapper = () => {
       collabAPI?.setUsername(user?.name || "");
     }
     collabAPI?.setAvatarUrl(user?.image || null);
-  }, [user?.name]);
+  }, [collabAPI, user?.image, user?.name]);
 
   useEffect(() => {
     const fetchRoomData = async () => {
