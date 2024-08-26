@@ -152,6 +152,8 @@ import {
 } from "../packages/excalidraw/components/TopPanel";
 import "./components/comment/CommentList.scss";
 import initEcho from "./data/echo";
+import AccessDenied from "../packages/excalidraw/components/AccessDenied";
+import Spinner from "../packages/excalidraw/components/Spinner";
 
 polyfill();
 
@@ -408,6 +410,7 @@ const ExcalidrawWrapper = () => {
     null,
   );
   const [editComment, setEditComment] = useState<Comment | null>(null);
+  const [loading, setLoading] = useState<boolean>(true);
 
   // initial state
   // ---------------------------------------------------------------------------
@@ -421,6 +424,7 @@ const ExcalidrawWrapper = () => {
   }
 
   useEffect(() => {
+    setLoading(true);
     console.log(window.location.href);
 
     let tokenParam;
@@ -449,10 +453,12 @@ const ExcalidrawWrapper = () => {
     setTimeout(() => {
       trackEvent("load", "version", getVersion());
     }, VERSION_TIMEOUT);
+    setLoading(false);
   }, []);
 
   useEffect(() => {
     const fetchData = async () => {
+      setLoading(true);
       const url =
         userType === "user"
           ? `${VITE_APP_TAIGA_BACKEND_URL}/users/me`
@@ -467,6 +473,7 @@ const ExcalidrawWrapper = () => {
       const json = await response.json();
       setUser(json.data);
       token && (await getAllComment(token));
+      setLoading(false);
     };
     if (token) {
       fetchData();
@@ -1063,6 +1070,14 @@ const ExcalidrawWrapper = () => {
     [setShareDialogState],
   );
 
+  if (loading) {
+    return <Spinner />;
+  }
+
+  // Show Access Denied component if no token is present
+  if (!token || !user) {
+    return <AccessDenied />;
+  }
   // browsers generally prevent infinite self-embedding, there are
   // cases where it still happens, and while we disallow self-embedding
   // by not whitelisting our own origin, this serves as an additional guard
