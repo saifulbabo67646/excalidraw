@@ -7,6 +7,7 @@ import { TopErrorBoundary } from "./components/TopErrorBoundary";
 import {
   APP_NAME,
   EVENT,
+  MIME_TYPES,
   THEME,
   TITLE_TIMEOUT,
   VERSION_TIMEOUT,
@@ -28,6 +29,7 @@ import {
   reconcileElements,
   Footer,
   getVisibleSceneBounds,
+  convertToExcalidrawElements,
 } from "../packages/excalidraw";
 import type {
   AppState,
@@ -36,6 +38,7 @@ import type {
   ExcalidrawInitialDataState,
   UIAppState,
   PointerDownState as ExcalidrawPointerDownState,
+  BinaryFileData,
 } from "../packages/excalidraw/types";
 import type { ResolvablePromise } from "../packages/excalidraw/utils";
 import {
@@ -143,7 +146,10 @@ import CommentThread, {
   LineBreaker,
 } from "./components/comment/CommentThread";
 import { AppFooter } from "./components/AppFooter";
-import { isCommentClicked } from "../packages/excalidraw/components/TopPanel";
+import {
+  isCommentClicked,
+  fileName,
+} from "../packages/excalidraw/components/TopPanel";
 import "./components/comment/CommentList.scss";
 import initEcho from "./data/echo";
 import AccessDenied from "../packages/excalidraw/components/AccessDenied";
@@ -326,7 +332,6 @@ const initializeScene = async (opts: {
   }
 
   if (roomLinkData && opts.collabAPI) {
-    console.log("roomLinkData", roomLinkData);
     const { excalidrawAPI } = opts;
 
     const scene = await opts.collabAPI.startCollaboration(roomLinkData);
@@ -399,6 +404,12 @@ const ExcalidrawWrapper = () => {
   const [userType, setUserType] = useState<string | null>(null);
   const [user, setUser] = useState<any | null>(null);
   const [scrollChange, setScrollChange] = useState<boolean>(false);
+  const [commentPlaceChange, setCommentPlaceChange] = useState<boolean>(false);
+  const [commentMoveId, setCommentMoveId] = useState<string | null>(null);
+  const [editCommentClick, setEditCommentClick] = useState<Comment | null>(
+    null,
+  );
+  const [editComment, setEditComment] = useState<Comment | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
 
   // initial state
@@ -415,13 +426,13 @@ const ExcalidrawWrapper = () => {
   useEffect(() => {
     setLoading(true);
     console.log(window.location.href);
-  
+
     let tokenParam;
     if (process.env.NODE_ENV === "production") {
       // In production, get the token from cookies
       const cookies = document.cookie.split("; ");
-      const tokenCookie = cookies.find(cookie => cookie.startsWith("token="));
-      
+      const tokenCookie = cookies.find((cookie) => cookie.startsWith("token="));
+
       if (tokenCookie) {
         tokenParam = tokenCookie.split("=")[1];
       }
@@ -430,10 +441,10 @@ const ExcalidrawWrapper = () => {
       const params = new URLSearchParams(window.location.search);
       tokenParam = params.get("token");
     }
-  
+
     const params = new URLSearchParams(window.location.search);
     const typeParam = params.get("type");
-    if(tokenParam){
+    if (tokenParam) {
       setToken(tokenParam);
     }
     setUserType(typeParam);
@@ -543,6 +554,7 @@ const ExcalidrawWrapper = () => {
   const collabError = useAtomValue(collabErrorIndicatorAtom);
 
   const [isCommentClick, setIsCommentClick] = useAtom(isCommentClicked);
+  const [newFileName, setNewFileName] = useAtom(fileName);
 
   useHandleLibrary({
     excalidrawAPI,
@@ -556,7 +568,108 @@ const ExcalidrawWrapper = () => {
     if (username !== user?.name) {
       collabAPI?.setUsername(user?.name || "");
     }
+    collabAPI?.setAvatarUrl(user?.image || null);
   }, [user?.name]);
+
+  useEffect(() => {
+    const fetchRoomData = async () => {
+      const roomLinkData = getCollaborationLinkData(window.location.href);
+      const response = await fetch(
+        `${VITE_APP_TAIGA_BACKEND_URL}/annotation-room/${roomLinkData?.roomId}`,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            Accept: "application/json",
+            "Content-Type": "application/json",
+          },
+        },
+      );
+      const jsonRes = await response.json();
+      setNewFileName(jsonRes[0]?.asset_blueprint?.name);
+      if (!jsonRes[0]?.is_file_load_canvas) {
+        fetchData(jsonRes[0]?.asset_blueprint?.s3_url, jsonRes[0]?.id);
+      }
+    };
+    const fetchData = async (filePath: string, id: string) => {
+      try {
+        const res = await fetch(filePath);
+
+        if (!res.ok) {
+          throw new Error(`Failed to fetch image: ${res.statusText}`);
+        }
+
+        const imageData = await res.blob();
+        const reader = new FileReader();
+        reader.readAsDataURL(imageData);
+
+        reader.onload = function () {
+          const imageUrl = reader.result as string;
+
+          const img = new Image();
+          img.src = imageUrl;
+
+          img.onload = function () {
+            const originalWidth = img.naturalWidth;
+            const originalHeight = img.naturalHeight;
+
+            const imagesArray: BinaryFileData[] = [
+              {
+                id: "3dpc" as BinaryFileData["id"],
+                dataURL: reader.result as BinaryFileData["dataURL"],
+                mimeType: MIME_TYPES.png,
+                created: Date.now(),
+                lastRetrieved: Date.now(),
+              },
+            ];
+
+            excalidrawAPI?.updateScene({
+              elements: convertToExcalidrawElements([
+                {
+                  type: "image",
+                  x: 100,
+                  y: 100,
+                  width: originalWidth,
+                  height: originalHeight,
+                  fileId: "3dpc" as FileId,
+                },
+              ]),
+            });
+
+            excalidrawAPI?.addFiles(imagesArray);
+            updateStatus(id);
+          };
+        };
+
+        reader.onerror = function () {
+          console.error("Error reading the image data.");
+        };
+      } catch (error) {
+        console.error("Error fetching image from S3:", error);
+      }
+    };
+    const updateStatus = async (id: string) => {
+      const res = await fetch(
+        `${VITE_APP_TAIGA_BACKEND_URL}/annotation-room/${id}`,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            Accept: "application/json",
+            "Content-Type": "application/json",
+          },
+          method: "PUT",
+          body: JSON.stringify({
+            is_file_load_canvas: true,
+          }),
+        },
+      );
+      const resJson = await res.json();
+      console.log(resJson);
+    };
+
+    if (token && excalidrawAPI) {
+      fetchRoomData();
+    }
+  }, [token, excalidrawAPI]);
 
   useEffect(() => {
     if (!excalidrawAPI || (!isCollabDisabled && !collabAPI)) {
@@ -787,6 +900,70 @@ const ExcalidrawWrapper = () => {
     };
   }, [excalidrawAPI]);
 
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  const updateCommentApi = useCallback(
+    async (comment: Comment) => {
+      const response = await fetch(
+        `${VITE_APP_TAIGA_BACKEND_URL}/comments/${comment?.id}`,
+        {
+          method: "PUT",
+          headers: {
+            Authorization: `Bearer ${token}`,
+            Accept: "application/json",
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            type: userType,
+            value: comment.value,
+            x: comment.x,
+            y: comment.y,
+          }),
+        },
+      );
+      return await response.json();
+    },
+    [token, userType],
+  );
+
+  const deleteCommentApi = useCallback(
+    async (comment: Comment) => {
+      const response = await fetch(
+        `${VITE_APP_TAIGA_BACKEND_URL}/comments/${comment?.id}`,
+        {
+          method: "DELETE",
+          headers: {
+            Authorization: `Bearer ${token}`,
+            Accept: "application/json",
+            "Content-Type": "application/json",
+          },
+        },
+      );
+
+      if (response.ok) {
+        return "comment Deleted successfully";
+      }
+    },
+    [token],
+  );
+
+  useEffect(() => {
+    if (commentPlaceChange && commentMoveId) {
+      let obj = commentIcons[commentMoveId];
+      obj = {
+        ...obj,
+        x: obj.x + 60,
+      };
+      updateCommentApi(obj);
+      setCommentPlaceChange(false);
+    }
+  }, [
+    commentPlaceChange,
+    commentMoveId,
+    commentIcons,
+    // eslint-disable-next-line @typescript-eslint/no-use-before-define
+    updateCommentApi,
+  ]);
+
   const onChange = (
     elements: readonly OrderedExcalidrawElement[],
     appState: AppState,
@@ -896,7 +1073,7 @@ const ExcalidrawWrapper = () => {
   if (loading) {
     return <Spinner />;
   }
-  
+
   // Show Access Denied component if no token is present
   if (!token || !user) {
     return <AccessDenied />;
@@ -1089,6 +1266,9 @@ const ExcalidrawWrapper = () => {
         } else {
           setComment(null);
         }
+      } else {
+        setCommentPlaceChange(true);
+        setCommentMoveId(pointerDownState.hitElement.id!);
       }
     });
   };
@@ -1206,10 +1386,10 @@ const ExcalidrawWrapper = () => {
           y: comment.y,
           id,
           value: comment.value,
+          user,
         },
       });
     }
-    console.log("show all comment icons", commentIcons);
     setComment(null);
   };
 
@@ -1221,29 +1401,9 @@ const ExcalidrawWrapper = () => {
       setComment(null);
       return;
     }
-    console.log("comment", comment);
     // lets save the comment here
-    const response = await fetch(
-      `${VITE_APP_TAIGA_BACKEND_URL}/comments/${comment?.id}`,
-      {
-        method: "PUT",
-        headers: {
-          Authorization: `Bearer ${token}`,
-          Accept: "application/json",
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          type: userType,
-          value: comment.value,
-          x: comment.x,
-          y: comment.y,
-        }),
-      },
-    );
-    const saveComment = await response.json();
-    console.log(saveComment);
+    const saveComment = await updateCommentApi(comment);
     const id = saveComment.id || nanoid();
-    //@TODO: lets call backend api or socket
     setCommentIcons({
       ...commentIcons,
       [id]: {
@@ -1253,8 +1413,31 @@ const ExcalidrawWrapper = () => {
         value: comment.value,
       },
     });
-    console.log("show all comment icons", commentIcons);
     setComment(null);
+  };
+
+  const saveEditComment = async () => {
+    if (!editComment) {
+      return;
+    }
+
+    try {
+      const saveComment = await updateCommentApi(editComment);
+      if (saveComment) {
+        setEditCommentClick(null);
+        setEditComment(null);
+      }
+    } catch (err) {
+      console.log(err);
+    }
+  };
+
+  const setDeleteCommentClick = async (data: Comment) => {
+    try {
+      await deleteCommentApi(data);
+    } catch (err) {
+      console.log(err);
+    }
   };
 
   const renderComment = () => {
@@ -1298,6 +1481,12 @@ const ExcalidrawWrapper = () => {
           comment={comment}
           setComment={setComment}
           saveComment={saveComment}
+          setEditCommentClick={setEditCommentClick}
+          setDeleteCommentClick={setDeleteCommentClick}
+          setEditComment={setEditComment}
+          editComment={editComment}
+          editCommentClick={editCommentClick}
+          saveEditComment={saveEditComment}
         />
       );
     }
@@ -1319,6 +1508,7 @@ const ExcalidrawWrapper = () => {
           setComment={setComment}
           saveComment={saveComment}
           onBlur={saveComment}
+          autoFocus={true}
         />
       </div>
     );
@@ -1728,7 +1918,7 @@ const ExcalidrawWrapper = () => {
         <div
           style={{
             position: "absolute",
-            top: 50,
+            top: 66,
             right: 0,
             zIndex: 2,
             width: "275px",
@@ -1742,7 +1932,9 @@ const ExcalidrawWrapper = () => {
               <button className="comment-header-icon">
                 <NewCommentIcon />
               </button>
-              <div className="comment-header-title">Comment</div>
+              <div className="comment-header-title poppins-semibold">
+                Comment
+              </div>
             </div>
             <div
               onClick={() => setIsCommentClick(!isCommentClick)}
@@ -1753,19 +1945,39 @@ const ExcalidrawWrapper = () => {
           </div>
           <LineBreaker />
           <div style={{ overflowY: "auto", height: "calc(100vh - 110px)" }}>
-            {Object.keys(commentIcons || []).length > 0
-              ? Object.values(commentIcons).map((singleComment) => {
-                  return (
-                    <CommentCard
-                      data={singleComment}
-                      showLineBreak={true}
-                      showCommentCount={!(singleComment?.replies?.length! < 1)}
-                      commentCount={singleComment?.replies?.length}
-                      handleMoveToComment={handleMoveToComment}
-                    />
-                  );
-                })
-              : "No Comments"}
+            {Object.keys(commentIcons || []).length > 0 ? (
+              Object.values(commentIcons).map((singleComment) => {
+                return (
+                  <CommentCard
+                    data={singleComment}
+                    showLineBreak={true}
+                    showCommentCount={!(singleComment?.replies?.length! < 1)}
+                    commentCount={singleComment?.replies?.length}
+                    handleMoveToComment={handleMoveToComment}
+                    setEditCommentClick={setEditCommentClick}
+                    setDeleteCommentClick={setDeleteCommentClick}
+                    setEditComment={setEditComment}
+                    editComment={editComment}
+                    editCommentClick={editCommentClick}
+                    setComment={setComment}
+                    isEditing={singleComment?.id === editCommentClick?.id}
+                    saveEditComment={saveEditComment}
+                  />
+                );
+              })
+            ) : (
+              <div
+                style={{
+                  display: "flex",
+                  justifyContent: "center",
+                  alignItems: "center",
+                  marginTop: "50px",
+                }}
+                className="poppins-regular"
+              >
+                No Comments
+              </div>
+            )}
           </div>
         </div>
       )}

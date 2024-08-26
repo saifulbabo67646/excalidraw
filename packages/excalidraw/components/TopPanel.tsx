@@ -13,6 +13,7 @@ import { useExcalidrawSetAppState } from "./App";
 import { atom, useAtom } from "jotai";
 
 export const isCommentClicked = atom(false);
+export const fileName = atom(null);
 
 export const TopPanel = ({
   appState,
@@ -23,6 +24,7 @@ export const TopPanel = ({
 }) => {
   const setAppState = useExcalidrawSetAppState();
   const [isCommentClick, setIsCommentClicked] = useAtom(isCommentClicked);
+  const [newFileName, setNewFileName] = useAtom(fileName);
   return (
     <div className="top-panel">
       {/* Left Section */}
@@ -52,7 +54,7 @@ export const TopPanel = ({
 
       {/* Middle Section */}
       <div className="middle-section">
-        <span>2D file name</span>
+        <span>{newFileName ? newFileName : "2D file name"}</span>
       </div>
 
       {/* Right Section */}
