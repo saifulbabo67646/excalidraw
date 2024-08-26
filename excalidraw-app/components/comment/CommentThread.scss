@@ -4,7 +4,12 @@
 
 .comment-card-wrapper {
     padding: 8px;
-    max-width: 300px;
+    max-width: 320px;
+    gap: 4px;
+    border: 0px 0px 1px 0px;
+    opacity: 0px;
+    border-top: 1px solid var(--Greyscale-200, #DCE0E3);
+
 
     .comment-card-header-wrapper {
         display: flex;
@@ -18,21 +23,21 @@
         .card-header-name {
             font-weight: 500;
             color: #38393C;
-            font-size: 12px;
-            margin: 4px;
+            font-size: 11.2px;
+            margin: 4px 0px;
+            line-height: 16px;
         }
         .card-header-date {
             color: #98A1A9;
             font-weight: 500;
-            font-size: 12px;
+            font-size: 11.2px;
             margin: 4px;
-            margin-top: 7px;
+            line-height: 16px;
         }
     }
     
     .threedot-icon-wrapper {
-        margin: 4px;
-        margin-top: 7px;
+        position: relative;
     
         .comment-threedot-icon {
             background: none;
@@ -40,6 +45,32 @@
             height: 16px;
             width: 16px;
         }
+
+        .threedot-icon-menu {
+            position: absolute;
+            right: 0;
+            box-shadow: 0px 1px 6px 0px #00000040;
+            border: 1px solid var(--Greyscale-200, #DCE0E3);
+            background: var(--Greyscale-0, #FFFFFF);
+            border-radius: 8px;
+            padding: 8px;
+            width: 100px;
+
+            .menu-btn {
+                display: flex;
+                background: none;
+                border: none;
+                justify-content: start;
+                width: 90px;
+                cursor: pointer;
+                align-items: center;
+            }
+            .menu-btn:hover{
+                background-color: #EAEDF0;
+            }
+        }
+
+        
     }
     .comment-value-wrapper {
         padding: 4px;
@@ -48,6 +79,7 @@
             color: #38393C;
             font-weight: 500;
             margin-top: 4px;
+            font-size: 12px;
         }
     }
 
@@ -60,6 +92,7 @@
             line-height: 16px;
             font-weight: 500;
             color: #029AED;
+            font-size: 11.2px;
         }
     }
 }
@@ -70,8 +103,15 @@
     border: 1px solid #ddd;
     border-radius: 12px;
     padding: 8px 12px;
-    width: 100%;
+    width: 300px;
     box-sizing: border-box;
+    padding: 8px 12px 8px 8px;
+    gap: 8px;
+    border-radius: 8px;
+    border: 1px solid var(--Greyscale-200, #DCE0E3);
+    opacity: 0px;
+    margin: auto;
+
   }
   
   .comment-input {
@@ -79,12 +119,13 @@
     border: none;
     outline: none;
     background-color: transparent;
-    font-size: 14px;
+    font-size: 11.2px;
     color: #333;
     resize: none;
     padding: 0;
     margin-right: 8px;
-    font-family: inherit; /* Matches input to surrounding text styling */
+    font-family: inherit;
+    font-weight: 500;
   }
   
   .comment-send-button {
@@ -95,4 +136,11 @@
     padding: 0;
     width: 24px;
     height: 24px;
+  }
+
+  .comment-close-icon {
+    height: 24px;
+    width: 24px;
+    margin-right: 8px;
+    cursor: pointer;
   }

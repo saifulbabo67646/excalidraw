@@ -21,7 +21,12 @@ export type ColorPickerColor =
 export type ColorTuple = readonly [string, string, string, string, string];
 export type ColorPalette = Merge<
   Record<ColorPickerColor, ColorTuple>,
-  { black: "#1e1e1e"; white: "#ffffff"; transparent: "transparent" }
+  {
+    black: "#1e1e1e";
+    white: "#ffffff";
+    transparent: "transparent";
+    taiga_grey: "#F5F6F7";
+  }
 >;
 
 // used general type instead of specific type (ColorPalette) to support custom colors
@@ -52,6 +57,7 @@ export const COLOR_PALETTE = {
   transparent: "transparent",
   black: "#1e1e1e",
   white: "#ffffff",
+  taiga_grey: "#F5F6F7",
   // open-colors
   gray: getSpecificColorShades("gray", ELEMENTS_PALETTE_SHADE_INDEXES),
   red: getSpecificColorShades("red", ELEMENTS_PALETTE_SHADE_INDEXES),
@@ -107,7 +113,7 @@ export const DEFAULT_ELEMENT_BACKGROUND_PICKS = [
 export const DEFAULT_CANVAS_BACKGROUND_PICKS = [
   COLOR_PALETTE.white,
   // radix slate2
-  "#f8f9fa",
+  COLOR_PALETTE.taiga_grey,
   // radix blue2
   "#f5faff",
   // radix yellow2

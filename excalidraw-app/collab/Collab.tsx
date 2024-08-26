@@ -98,6 +98,7 @@ interface CollabState {
   /** errors related to saving */
   dialogNotifiedErrors: Record<string, boolean>;
   username: string;
+  avatarUrl: string | null;
   activeRoomLink: string | null;
 }
 
@@ -117,6 +118,8 @@ export interface CollabAPI {
   getUsername: CollabInstance["getUsername"];
   getActiveRoomLink: CollabInstance["getActiveRoomLink"];
   setCollabError: CollabInstance["setErrorDialog"];
+  setAvatarUrl: CollabInstance["setAvatarUrl"];
+  getAvatarUrl: CollabInstance["getAvatarUrl"];
 }
 
 interface CollabProps {
@@ -141,6 +144,7 @@ class Collab extends PureComponent<CollabProps, CollabState> {
       dialogNotifiedErrors: {},
       username: importUsernameFromLocalStorage() || "",
       activeRoomLink: null,
+      avatarUrl: null,
     };
     this.portal = new Portal(this);
     this.fileManager = new FileManager({
@@ -216,6 +220,8 @@ class Collab extends PureComponent<CollabProps, CollabState> {
       getUsername: this.getUsername,
       getActiveRoomLink: this.getActiveRoomLink,
       setCollabError: this.setErrorDialog,
+      setAvatarUrl: this.setAvatarUrl,
+      getAvatarUrl: this.getAvatarUrl,
     };
 
     appJotaiStore.set(collabAPIAtom, collabAPI);
@@ -625,10 +631,12 @@ class Collab extends PureComponent<CollabProps, CollabState> {
           }
 
           case WS_SUBTYPES.IDLE_STATUS: {
-            const { userState, socketId, username } = decryptedData.payload;
+            const { userState, socketId, username, avatarUrl } =
+              decryptedData.payload;
             this.updateCollaborator(socketId, {
               userState,
               username,
+              avatarUrl: avatarUrl ? avatarUrl : undefined,
             });
             break;
           }
@@ -946,6 +954,13 @@ class Collab extends PureComponent<CollabProps, CollabState> {
   };
 
   getUsername = () => this.state.username;
+
+  setAvatarUrl = (avatarUrl: string | null) => {
+    this.setState({ avatarUrl });
+    // saveUsernameToLocalStorage(username);
+  };
+
+  getAvatarUrl = () => this.state.avatarUrl;
 
   setActiveRoomLink = (activeRoomLink: string | null) => {
     this.setState({ activeRoomLink });

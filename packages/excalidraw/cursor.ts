@@ -6,6 +6,10 @@ import { isHandToolActive, isEraserActive } from "./appState";
 const laserPointerCursorSVG_tag = `<svg viewBox="0 0 24 24" stroke-width="1" width="28" height="28" xmlns="http://www.w3.org/2000/svg">`;
 const laserPointerCursorBackgroundSVG = `<path d="M6.164 11.755a5.314 5.314 0 0 1-4.932-5.298 5.314 5.314 0 0 1 5.311-5.311 5.314 5.314 0 0 1 5.307 5.113l8.773 8.773a3.322 3.322 0 0 1 0 4.696l-.895.895a3.322 3.322 0 0 1-4.696 0l-8.868-8.868Z" style="fill:#fff"/>`;
 const laserPointerCursorIconSVG = `<path stroke="#1b1b1f" fill="#fff" d="m7.868 11.113 7.773 7.774a2.359 2.359 0 0 0 1.667.691 2.368 2.368 0 0 0 2.357-2.358c0-.625-.248-1.225-.69-1.667L11.201 7.78 9.558 9.469l-1.69 1.643v.001Zm10.273 3.606-3.333 3.333m-3.25-6.583 2 2m-7-7 3 3M3.664 3.625l1 1M2.529 6.922l1.407-.144m5.735-2.932-1.118.866M4.285 9.823l.758-1.194m1.863-6.207-.13 1.408"/>`;
+const commentCursorIconSVG = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24">
+  <path d="M21 6.5a2.5 2.5 0 0 0-2.5-2.5h-13A2.5 2.5 0 0 0 3 6.5v7A2.5 2.5 0 0 0 5.5 16.5H7v3.32a.68.68 0 0 0 1.08.52l4.07-3.22h5.35A2.5 2.5 0 0 0 21 13.5v-7zM5.5 5.5h13A1 1 0 0 1 19.5 6.5v7a1 1 0 0 1-1 1h-5.65a.68.68 0 0 0-.43.15L8 17.68v-2.68a.68.68 0 0 0-.68-.68H5.5a1 1 0 0 1-1-1v-7A1 1 0 0 1 5.5 5.5z"/>
+</svg>
+`;
 
 const laserPointerCursorDataURL_lightMode = `data:${
   MIME_TYPES.svg
@@ -101,5 +105,11 @@ export const setCursorForShape = (
     interactiveCanvas.style.cursor = CURSOR_TYPE.CROSSHAIR;
   } else if (appState.activeTool.type !== "image") {
     interactiveCanvas.style.cursor = CURSOR_TYPE.AUTO;
+  }
+  if (appState.activeTool.customType === "comment") {
+    const url = `data:${MIME_TYPES.svg},${encodeURIComponent(
+      commentCursorIconSVG,
+    )}`;
+    setCursor(interactiveCanvas, `url(${url}), auto`);
   }
 };

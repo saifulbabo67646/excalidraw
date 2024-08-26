@@ -1,13 +1,16 @@
-import React from "react";
+import React, { useEffect, useRef, useState } from "react";
 import type { Comment } from "../../App";
 import { KEYS } from "../../../packages/excalidraw/keys";
 import {
   CloseIcon,
+  DeleteIcon,
+  EditIcon,
   SendIcon,
   ThreedotIcon,
 } from "../../../packages/excalidraw/components/icons";
 import { t } from "../../../packages/excalidraw/i18n";
 import "./CommentThread.scss";
+import { timeAgo } from "../../utils";
 
 type CommentThreadProps = {
   commentThread: any;
@@ -15,6 +18,12 @@ type CommentThreadProps = {
   comment: Comment;
   setComment: (comment: Comment | null) => void;
   saveComment: () => void;
+  setEditCommentClick: (comment: Comment | null) => void;
+  setDeleteCommentClick: (comment: Comment) => void;
+  setEditComment: (comment: Comment | null) => void;
+  editComment: Comment | null;
+  editCommentClick: Comment | null;
+  saveEditComment: () => void;
 };
 
 export const CommentInput = ({
@@ -22,35 +31,128 @@ export const CommentInput = ({
   setComment,
   saveComment,
   onBlur,
+  autoFocus,
+  isEditing,
+  cancelEdit,
 }: {
-  comment: Comment;
+  comment: Comment | null;
   setComment: (comment: Comment | null) => void;
   saveComment: () => void;
   onBlur?: () => void;
+  autoFocus?: boolean;
+  isEditing?: boolean;
+  cancelEdit?: () => void;
 }) => {
+  const textAreaRef = useRef<HTMLTextAreaElement | null>(null);
+
+  useEffect(() => {
+    setTimeout(() => {
+      if (autoFocus && textAreaRef.current) {
+        textAreaRef.current.focus();
+      }
+    });
+  }, [autoFocus]);
+
+  const handleCancel = () => {
+    cancelEdit && cancelEdit();
+  };
+
   return (
     <div className="comment-input-container">
       <textarea
         className="comment-input"
-        ref={(ref) => {
-          setTimeout(() => ref?.focus());
-        }}
-        placeholder={comment.value ? "Reply" : "Add a comment"}
-        value={comment.value}
+        ref={textAreaRef}
+        placeholder={comment?.value ? "Reply" : "Add a comment"}
+        value={comment?.value}
         onChange={(event) => {
-          setComment({ ...comment, value: event.target.value });
+          comment && setComment({ ...comment, value: event.target.value });
         }}
         onBlur={onBlur}
         onKeyDown={(event) => {
           if (!event.shiftKey && event.key === KEYS.ENTER) {
             event.preventDefault();
             saveComment();
+          } else if (event.key === KEYS.ESCAPE) {
+            handleCancel();
           }
         }}
       />
+      {isEditing && (
+        <div className="comment-close-icon" onClick={handleCancel}>
+          {CloseIcon}
+        </div>
+      )}
       <button className="comment-send-button" onClick={saveComment}>
         <SendIcon />
       </button>
+    </div>
+  );
+};
+
+export const CommentMenu = ({
+  setEditCommentClick,
+  setDeleteCommentClick,
+  comment,
+  setEditComment,
+}: {
+  comment: Comment;
+  setEditCommentClick: (comment: Comment) => void;
+  setDeleteCommentClick: (comment: Comment) => void;
+  setEditComment: (editComment: Comment | null) => void;
+}) => {
+  const [showMenu, setShowMenu] = useState(false);
+  const menuRef = useRef<HTMLDivElement | null>(null);
+
+  const toggleMenu = () => {
+    setShowMenu((prev) => !prev);
+  };
+
+  const handleClickOutside = (event: MouseEvent) => {
+    if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
+      setShowMenu(false);
+    }
+  };
+
+  useEffect(() => {
+    document.addEventListener("mousedown", handleClickOutside);
+
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, []);
+
+  const handleEdit = () => {
+    setEditCommentClick(comment);
+    setEditComment(comment);
+    setShowMenu(false);
+  };
+
+  const handleDelete = () => {
+    setDeleteCommentClick(comment);
+    setShowMenu(false);
+  };
+
+  return (
+    <div className="threedot-icon-wrapper" ref={menuRef}>
+      <button onClick={toggleMenu} className="comment-threedot-icon">
+        <ThreedotIcon />
+      </button>
+      {showMenu && (
+        <div className="threedot-icon-menu">
+          <button className="menu-btn" onClick={handleEdit}>
+            <div>
+              <EditIcon />
+            </div>
+            <div style={{ marginLeft: "4px" }}>Edit</div>
+          </button>
+          <button className="menu-btn" onClick={handleDelete}>
+            <div>
+              <DeleteIcon />
+            </div>
+            <div style={{ marginLeft: "4px" }}>Delete</div>
+          </button>
+        </div>
+      )}
     </div>
   );
 };
@@ -61,15 +163,31 @@ export const CommentCard = ({
   showCommentCount,
   commentCount,
   handleMoveToComment,
+  setEditCommentClick,
+  setDeleteCommentClick,
+  setEditComment,
+  editCommentClick,
+  editComment,
+  setComment,
+  isEditing,
+  saveEditComment,
 }: {
   data: any;
   showLineBreak?: boolean;
   showCommentCount?: boolean;
   commentCount?: number;
+  editComment: Comment | null;
+  editCommentClick: Comment | null;
   handleMoveToComment?: (
     e: React.MouseEvent<HTMLDivElement>,
     comment: Comment,
   ) => void;
+  setEditCommentClick: (comment: Comment | null) => void;
+  setDeleteCommentClick: (comment: Comment) => void;
+  setEditComment: (editComment: Comment | null) => void;
+  setComment: (comment: Comment | null) => void;
+  isEditing: boolean;
+  saveEditComment: () => void;
 }) => {
   return (
     <div className="comment-card-wrapper">
@@ -80,29 +198,43 @@ export const CommentCard = ({
               src={data.user?.image || "https://via.placeholder.com/40"}
               alt="avatar"
               style={{
-                width: "24px",
-                height: "24px",
+                width: "36px",
+                height: "36px",
                 borderRadius: "50%",
               }}
             />
           </div>
-          <div className="card-header-name">{data.user?.name}</div>
+          <div className="card-header-name">
+            <div>{data.user?.name}</div>
+            <div>{data.user?.company?.name}</div>
+          </div>
           <div className="card-header-date">
-            {new Date(data.created_at).toLocaleTimeString([], {
-              hour: "2-digit",
-              minute: "2-digit",
-            })}
+            {timeAgo(new Date(data.created_at))}
           </div>
         </div>
-        <div className="threedot-icon-wrapper">
-          <button className="comment-threedot-icon">
-            <ThreedotIcon />
-          </button>
+        <CommentMenu
+          comment={data}
+          setDeleteCommentClick={setDeleteCommentClick}
+          setEditCommentClick={setEditCommentClick}
+          setEditComment={setEditComment}
+        />
+      </div>
+      {isEditing ? (
+        <div>
+          <CommentInput
+            comment={editComment}
+            setComment={setEditComment}
+            saveComment={saveEditComment}
+            autoFocus={true}
+            isEditing={isEditing}
+            cancelEdit={() => setEditCommentClick(null)}
+          />
         </div>
-      </div>
-      <div className="comment-value-wrapper">
-        <p className="comment-value">{data.value}</p>
-      </div>
+      ) : (
+        <div className="comment-value-wrapper">
+          <p className="comment-value">{data.value}</p>
+        </div>
+      )}
       {showCommentCount && (
         <div
           onClick={(e) => handleMoveToComment && handleMoveToComment(e, data)}
@@ -112,7 +244,7 @@ export const CommentCard = ({
         </div>
       )}
 
-      {showLineBreak && <LineBreaker />}
+      {/* {showLineBreak && <LineBreaker />} */}
     </div>
   );
 };
@@ -138,6 +270,12 @@ const CommentThread = ({
   comment,
   setComment,
   saveComment,
+  setEditCommentClick,
+  setDeleteCommentClick,
+  setEditComment,
+  editComment,
+  editCommentClick,
+  saveEditComment,
 }: CommentThreadProps) => {
   return (
     <div
@@ -145,10 +283,10 @@ const CommentThread = ({
         ...style,
         position: "absolute",
         zIndex: 2,
-        backgroundColor: "#fff",
-        borderRadius: "20px",
-        boxShadow: "0 4px 12px rgba(0,0,0,0.1)",
-        color: "#333",
+        background: "#FFFFFF",
+        borderRadius: "16px",
+        boxShadow: "0px 1px 5px 0px #0000002E",
+        width: "320px",
       }}
     >
       <div
@@ -161,34 +299,53 @@ const CommentThread = ({
       >
         <div
           onClick={() => setComment(null)}
-          style={{ marginRight: "4px", height: "20px", width: "20px" }}
+          style={{ marginRight: "12px", height: "20px", width: "20px" }}
         >
           {CloseIcon}
         </div>
       </div>
       <LineBreaker />
-      <div
-        style={{ overflowY: "auto", maxHeight: "300px", marginBottom: "8px" }}
-      >
-        <CommentCard data={commentThread} />
-        <LineBreaker />
-        <div className="comment-thread">
-          {commentThread.replies!?.length > 0 &&
-            commentThread.replies!.map(
-              (reply: Comment, index: React.Key | null | undefined) => (
-                <div key={index}>
-                  <CommentCard data={reply} />
-                  <LineBreaker />
-                </div>
-              ),
-            )}
-        </div>
+      <div style={{ overflowY: "auto", maxHeight: "300px" }}>
+        <CommentCard
+          data={commentThread}
+          setEditCommentClick={setEditCommentClick}
+          setDeleteCommentClick={setDeleteCommentClick}
+          setEditComment={setEditComment}
+          editComment={editComment}
+          editCommentClick={editCommentClick}
+          setComment={setComment}
+          isEditing={commentThread?.id === editCommentClick?.id}
+          saveEditComment={saveEditComment}
+        />
+        {/* <LineBreaker /> */}
+        {commentThread.replies!?.length > 0 &&
+          commentThread.replies!.map(
+            (reply: Comment, index: React.Key | null | undefined) => (
+              <div key={index}>
+                <CommentCard
+                  data={reply}
+                  setEditCommentClick={setEditCommentClick}
+                  setDeleteCommentClick={setDeleteCommentClick}
+                  setEditComment={setEditComment}
+                  editComment={editComment}
+                  editCommentClick={editCommentClick}
+                  setComment={setComment}
+                  isEditing={reply?.id === editCommentClick?.id}
+                  saveEditComment={saveEditComment}
+                />
+                {/* <LineBreaker /> */}
+              </div>
+            ),
+          )}
       </div>
-      <CommentInput
-        comment={comment}
-        setComment={setComment}
-        saveComment={saveComment}
-      />
+      <div style={{ padding: "0px 12px 12px 12px" }}>
+        <CommentInput
+          comment={comment}
+          setComment={setComment}
+          saveComment={saveComment}
+          autoFocus={true}
+        />
+      </div>
     </div>
   );
 };
