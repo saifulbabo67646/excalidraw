@@ -569,11 +569,8 @@ const ExcalidrawWrapper = () => {
   });
 
   useEffect(() => {
-    const username = importUsernameFromLocalStorage();
-    if (username !== user?.name) {
-      collabAPI?.setUsername(user?.name || "");
-    }
     collabAPI?.setAvatarUrl(user?.image || null);
+    collabAPI?.setUsername(user?.name || "");
   }, [collabAPI, user?.image, user?.name]);
 
   useEffect(() => {
